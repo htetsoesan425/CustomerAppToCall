@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "11099509064",
+    "project_id": "customer-app-to-call",
+    "storage_bucket": "customer-app-to-call.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:11099509064:android:0bc32e75ced3423c02237d",
+        "android_client_info": {
+          "package_name": "com.dev_hss.customerapptocall"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCphGbvRPfUMCjkxW7LUCBCessBGCqdYAQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
