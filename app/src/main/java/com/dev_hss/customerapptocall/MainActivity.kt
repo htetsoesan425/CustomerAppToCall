@@ -30,17 +30,17 @@ class MainActivity : AppCompatActivity() {
 
 
     private val callMade = Emitter.Listener { args ->
-        val data1 = args[0] as JSONObject
-        Log.d(TAG, "callMade:$data1")
+        val test = args[0] as JSONObject
+        Log.d(TAG, "callMade:$test")
         try {
             val data = args[0] as JSONObject
             Log.d(TAG, "callMade:$data")
             //client.
-            mBinding.tv1.text = data.toString()
+            //mBinding.tv1.text = data.toString()
 
         } catch (e: JSONException) {
-            Log.d(TAG, "${e.message}")
-            mBinding.tv1.text = e.message
+            Log.d(TAG, "CallMadeErr-${e.message}")
+            //mBinding.tv1.text = e.message
 
         }
     }
@@ -51,10 +51,10 @@ class MainActivity : AppCompatActivity() {
         try {
             val data = args[0] as JSONObject
             Log.d(TAG, "answerMade:$data")
-            mBinding.tv2.text = data.toString()
+            //mBinding.tv2.text = data.toString()
         } catch (e: JSONException) {
-            Log.d(TAG, "${e.message}")
-            mBinding.tv2.text = e.message
+            Log.d(TAG, "answerMadeErr-${e.message}")
+            //mBinding.tv2.text = e.message
 
         }
     }
@@ -85,8 +85,14 @@ class MainActivity : AppCompatActivity() {
             //val msg = getString(R.string, token)
             Log.d(TAG, "fcm token: $fcmToken")
         }).addOnFailureListener {
-            Log.d(TAG, "failur: $it")
+            Log.d(TAG, "failure: $it")
         }
+        //val accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
+//        SocketHandler.setSocket("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU")
+//        SocketHandler.establishConnection()
+//        mSocket = SocketHandler.getSocket()
+//        mSocket.emit("joinCustomer", "65f00e0beee998e9e176b5e7")
+
 
         connectSocket()
 
@@ -96,8 +102,8 @@ class MainActivity : AppCompatActivity() {
             client.setSocket(mSocket)
 
             val data = JSONObject()
-            data.put("to", "65ee60d16a17dc9a8a8866d4")
-            data.put("from", "6440c33803562ce831a1a090")
+            data.put("to", "64897db0131c98f765390895") //rider
+            data.put("from", "65f00e0beee998e9e176b5e7")
             client.startAudioCall(data)
         }
 
@@ -111,10 +117,17 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun connectSocket() {
-        SocketHandler.setSocket(fcmToken) //customer
+        val accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
+        SocketHandler.setSocket(fcmToken)
         SocketHandler.establishConnection()
         mSocket = SocketHandler.getSocket()
+        mSocket.emit("joinCustomer", "65f00e0beee998e9e176b5e7")
 
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mSocket.close()
     }
 
 }

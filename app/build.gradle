@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.googleServices)
 }
 
 android {
@@ -48,11 +49,10 @@ dependencies {
     implementation(libs.socket.io.client) {
         exclude group: 'org.json', module: 'json'
     }
-    implementation libs.google.services
     implementation libs.firebase.messaging.ktx
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
     androidTestImplementation libs.androidx.espresso.core
-    implementation libs.firebase.bom.v3274
+    implementation platform(libs.firebase.bom.v3274)
 
 }

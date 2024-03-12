@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.dev_hss.customerapptocall" />
+                  <option name="mobileSdkAppId" value="1:11099509064:android:0bc32e75ced3423c02237d" />
+                  <option name="projectId" value="customer-app-to-call" />
+                  <option name="projectNumber" value="11099509064" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />

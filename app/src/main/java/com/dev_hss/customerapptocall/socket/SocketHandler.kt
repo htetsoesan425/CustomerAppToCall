@@ -5,6 +5,7 @@ import com.dev_hss.customerapptocall.SOCKET_URL
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
+import io.socket.engineio.client.EngineIOException
 import io.socket.engineio.client.transports.WebSocket
 import org.json.JSONObject
 
@@ -25,9 +26,7 @@ object SocketHandler {
             Log.d("SocketManager", "userId:: $token")
             val options = IO.Options.builder()
                 .setExtraHeaders(singletonMap("Authorization", singletonList("Bearer $token")))
-                .setPath("/socket.io/")
-                .setQuery("x=42")
-                .setTransports(arrayOf(WebSocket.NAME))
+                .setPath("/socket.io/").setQuery("x=42").setTransports(arrayOf(WebSocket.NAME))
                 .build()
 
             mSocket = IO.socket(SOCKET_URL, options)
@@ -45,8 +44,23 @@ object SocketHandler {
     private val onConnect = Emitter.Listener {
         Log.d(TAG, "EVENT_CONNECT: connected to ${it}")
     }
-    private val onError = Emitter.Listener {
-        Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${it[0]}!")
+    private val onError = Emitter.Listener { error ->
+        val jsonObject = error[0] as JSONObject
+
+        Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${error[0]}!")
+//        try {
+//            val jsonObject = error[0] as JSONObject
+//            if (jsonObject.has("cause")) {
+//                val detailMessage = jsonObject.getString("detailMessage")
+//                Log.d(TAG, "EVENT_CONNECT_ERROR: connection error $detailMessage!")
+//            } else {
+//                Log.d(TAG, "EVENT_CONNECT_ERROR: 'some_key' not found in error JSON object!")
+//            }
+//            Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${jsonObject}!")
+//        } catch (e: EngineIOException) {
+//            Log.d(TAG, "EVENT_CONNECT_ERROR: EngineIOException ${e}!")
+//        }
+
     }
 
     private val onDisconnect = Emitter.Listener {
