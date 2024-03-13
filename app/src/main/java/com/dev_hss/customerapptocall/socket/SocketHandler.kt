@@ -5,10 +5,8 @@ import com.dev_hss.customerapptocall.SOCKET_URL
 import io.socket.client.IO
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
-import io.socket.engineio.client.EngineIOException
 import io.socket.engineio.client.transports.WebSocket
 import org.json.JSONObject
-
 import java.net.URISyntaxException
 import java.util.Collections.singletonList
 import java.util.Collections.singletonMap
@@ -41,30 +39,28 @@ object SocketHandler {
         }
     }
 
-    private val onConnect = Emitter.Listener {
-        Log.d(TAG, "EVENT_CONNECT: connected to ${it}")
+    private val onConnect = Emitter.Listener { args ->
+        Log.d(TAG, "EVENT_CONNECT: connected to $args")
     }
+
     private val onError = Emitter.Listener { error ->
-        val jsonObject = error[0] as JSONObject
-
-        Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${error[0]}!")
-//        try {
-//            val jsonObject = error[0] as JSONObject
-//            if (jsonObject.has("cause")) {
-//                val detailMessage = jsonObject.getString("detailMessage")
-//                Log.d(TAG, "EVENT_CONNECT_ERROR: connection error $detailMessage!")
-//            } else {
-//                Log.d(TAG, "EVENT_CONNECT_ERROR: 'some_key' not found in error JSON object!")
-//            }
-//            Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${jsonObject}!")
-//        } catch (e: EngineIOException) {
-//            Log.d(TAG, "EVENT_CONNECT_ERROR: EngineIOException ${e}!")
-//        }
-
+        if (error.isNotEmpty() && error[0] is io.socket.engineio.client.EngineIOException) {
+            // Handle EngineIOException
+            val engineIOException = error[0] as io.socket.engineio.client.EngineIOException
+            Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${engineIOException.cause?.message}!")
+        } else {
+            Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${error[0]}!")
+        }
     }
 
-    private val onDisconnect = Emitter.Listener {
-        Log.d(TAG, "EVENT_DISCONNECT: disconnected to ${it[0]}!")
+    private val onDisconnect = Emitter.Listener { error ->
+        if (error.isNotEmpty() && error[0] is io.socket.engineio.client.EngineIOException) {
+            // Handle EngineIOException
+            val engineIOException = error[0] as io.socket.engineio.client.EngineIOException
+            Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${engineIOException.cause?.message}!")
+        } else {
+            Log.d(TAG, "EVENT_CONNECT_ERROR: connection error ${error[0]}!")
+        }
     }
 
     @Synchronized

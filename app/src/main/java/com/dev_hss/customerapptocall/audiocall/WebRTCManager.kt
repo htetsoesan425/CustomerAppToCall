@@ -2,9 +2,12 @@ package com.dev_hss.customerapptocall.audiocall
 
 import android.content.Context
 import android.util.Log
+import com.dev_hss.customerapptocall.MainActivity
 import com.dev_hss.riderappfor360food.utils.audiocall.CustomPeerConnectionObserver
 import com.dev_hss.riderappfor360food.utils.audiocall.CustomSdpObserver
 import io.socket.client.Socket
+import io.socket.emitter.Emitter
+import org.json.JSONException
 import org.json.JSONObject
 import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
@@ -22,10 +25,27 @@ class WebRTCManager(private val context: Context) {
         const val TAG = "WebRTCManager"
     }
 
+    private lateinit var mData: JSONObject
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var localAudioSource: AudioSource? = null
     private var localAudioTrack: AudioTrack? = null
     private var localPeer: PeerConnection? = null
+    private val callMade = Emitter.Listener { args ->
+        val test = args[0] as JSONObject
+        Log.d(MainActivity.TAG, "callMade:$test")
+        try {
+            val data = args[0] as JSONObject
+            Log.d(MainActivity.TAG, "callMade:$data")
+            //client.
+            //mBinding.tv1.text = data.toString()
+
+
+        } catch (e: JSONException) {
+            Log.d(MainActivity.TAG, "CallMadeErr-${e.message}")
+            //mBinding.tv1.text = e.message
+
+        }
+    }
 
     init {
         // Initialize PeerConnectionFactory
@@ -70,9 +90,27 @@ class WebRTCManager(private val context: Context) {
 
     fun setSocket(socket: Socket) {
         this.socket = socket
+
+
+        socket.on("call-made") { args ->
+            val sdpOffer =
+                args[0] as JSONObject // Assuming the SDP offer is contained in a JSONObject
+            Log.d(TAG, "setSocket: ${sdpOffer.get("sdp")}")
+
+            // Parse and process the SDP offer as needed
+            val sessionDescription = parseSdpOffer(sdpOffer)
+            // Call receiveSdpFromRemotePeer to handle the SDP offer
+            receiveSdpFromRemotePeer(sessionDescription)
+        }
     }
 
     fun startAudioCall(data: JSONObject) {
+
+
+        mData = data
+
+
+
 
         // Your WebRTCManager class should have a method like this to send SDP to the remote peer
         fun sendSdpToRemotePeer(sessionDescription: SessionDescription) {
@@ -90,8 +128,7 @@ class WebRTCManager(private val context: Context) {
             override fun onCreateSuccess(sessionDescription: SessionDescription) {
                 // Step 2: Exchange SDP
                 localPeer?.setLocalDescription(
-                    object : CustomSdpObserver("setLocalDescription") {},
-                    sessionDescription
+                    object : CustomSdpObserver("setLocalDescription") {}, sessionDescription
                 )
                 // Send the offer SDP to the remote peer through your signaling mechanism
                 sendSdpToRemotePeer(sessionDescription)
@@ -99,34 +136,90 @@ class WebRTCManager(private val context: Context) {
         }, MediaConstraints())
 
 
+//        // Assuming you have a method to receive SDP from the remote peer
+//        // Your WebRTCManager class should have a method like this to receive SDP from the remote peer
+//        fun receiveSdpFromRemotePeer(sessionDescription: SessionDescription) {
+//            // Step 3: Create Answer
+//            localPeer?.setRemoteDescription(
+//                object : CustomSdpObserver("setRemoteDescription") {},
+//                sessionDescription
+//            )
+//
+//            localPeer?.createAnswer(object : SdpObserver by CustomSdpObserver("createAnswer") {
+//                override fun onCreateSuccess(answer: SessionDescription) {
+//                    // Step 4: Exchange SDP
+//                    localPeer?.setLocalDescription(object :
+//                        CustomSdpObserver("setLocalDescription") {}, answer)
+//                    // Send the answer SDP to the remote peer through your signaling mechanism
+//                    sendSdpToRemotePeer(answer)
+//                    Log.d(TAG, "onCreateSuccess: $answer")
+//                }
+//            }, MediaConstraints())
+//        }
+//
+//        // Assuming you have a method to receive ICE candidates from the remote peer
+//        // Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
+//        fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
+//            // Step 5: Exchange ICE Candidates
+//            localPeer?.addIceCandidate(iceCandidate)
+//        }
 
-        // Assuming you have a method to receive SDP from the remote peer
-        // Your WebRTCManager class should have a method like this to receive SDP from the remote peer
-        fun receiveSdpFromRemotePeer(sessionDescription: SessionDescription) {
-            // Step 3: Create Answer
-            localPeer?.setRemoteDescription(
-                object : CustomSdpObserver("setRemoteDescription") {},
-                sessionDescription
-            )
+    }
 
-            localPeer?.createAnswer(object : SdpObserver by CustomSdpObserver("createAnswer") {
-                override fun onCreateSuccess(answer: SessionDescription) {
-                    // Step 4: Exchange SDP
-                    localPeer?.setLocalDescription(object :
-                        CustomSdpObserver("setLocalDescription") {}, answer)
-                    // Send the answer SDP to the remote peer through your signaling mechanism
-                    sendSdpToRemotePeer(answer)
-                    Log.d(TAG, "onCreateSuccess: $answer")
-                }
-            }, MediaConstraints())
+    private fun receiveSdpFromRemotePeer(sessionDescription: SessionDescription) {
+        // Step 3: Create Answer
+        localPeer?.setRemoteDescription(
+            object : CustomSdpObserver("setRemoteDescription") {}, sessionDescription
+        )
+
+        localPeer?.createAnswer(object : SdpObserver by CustomSdpObserver("createAnswer") {
+            override fun onCreateSuccess(answer: SessionDescription) {
+                // Step 4: Exchange SDP
+                localPeer?.setLocalDescription(
+                    object : CustomSdpObserver("setLocalDescription") {}, answer
+                )
+                // Send the answer SDP to the remote peer through your signaling mechanism
+                sendSdpToRemotePeer(answer)
+                Log.d(TAG, "onCreateSuccess: $answer")
+            }
+
+            override fun onSetFailure(p0: String?) {
+                Log.d(TAG, "onSetFailure: $p0")
+            }
+
+            override fun onSetSuccess() {
+                Log.d(TAG, "onSetSuccess: success")
+            }
+        }, MediaConstraints())
+    }
+
+    // Assuming you have a method to receive ICE candidates from the remote peer
+    // Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
+    fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
+        // Step 5: Exchange ICE Candidates
+        localPeer?.addIceCandidate(iceCandidate)
+    }
+
+
+    // Your WebRTCManager class should have a method like this to send SDP to the remote peer
+    fun sendSdpToRemotePeer(sessionDescription: SessionDescription) {
+        // Implement the logic to send the SDP to the remote peer using your signaling mechanism
+        Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.description}")
+        Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.type}")
+        mData.put("sdp", sessionDescription)
+        socket.emit("call-other", mData)
+    }
+
+    private fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
+        val sdpFrom = sdpOfferJson.getString("from")
+        val sdpTo = sdpOfferJson.getString("to")
+        val sdpTypeString = sdpOfferJson.getString("type")
+        val sdpDescription = sdpOfferJson.getString("sdp")
+        val sdpType = when (sdpTypeString) {
+            "offer" -> SessionDescription.Type.OFFER
+            "answer" -> SessionDescription.Type.ANSWER
+            else -> throw IllegalArgumentException("Invalid SDP type: $sdpTypeString")
         }
-
-        // Assuming you have a method to receive ICE candidates from the remote peer
-        // Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
-        fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
-            // Step 5: Exchange ICE Candidates
-            localPeer?.addIceCandidate(iceCandidate)
-        }
-
+        return SessionDescription(sdpType, sdpDescription)
     }
 }

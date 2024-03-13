@@ -29,21 +29,21 @@ class MainActivity : AppCompatActivity() {
     private var fcmToken: String = ""
 
 
-    private val callMade = Emitter.Listener { args ->
-        val test = args[0] as JSONObject
-        Log.d(TAG, "callMade:$test")
-        try {
-            val data = args[0] as JSONObject
-            Log.d(TAG, "callMade:$data")
-            //client.
-            //mBinding.tv1.text = data.toString()
-
-        } catch (e: JSONException) {
-            Log.d(TAG, "CallMadeErr-${e.message}")
-            //mBinding.tv1.text = e.message
-
-        }
-    }
+//    private val callMade = Emitter.Listener { args ->
+//        val test = args[0] as JSONObject
+//        Log.d(TAG, "callMade:$test")
+//        try {
+//            val data = args[0] as JSONObject
+//            Log.d(TAG, "callMade:$data")
+//            //client.
+//            //mBinding.tv1.text = data.toString()
+//
+//        } catch (e: JSONException) {
+//            Log.d(TAG, "CallMadeErr-${e.message}")
+//            //mBinding.tv1.text = e.message
+//
+//        }
+//    }
 
     private val answerMade = Emitter.Listener { args ->
         val data1 = args[0] as JSONObject
@@ -97,13 +97,13 @@ class MainActivity : AppCompatActivity() {
         connectSocket()
 
         client = WebRTCManager(this)
+        client.setSocket(mSocket)
 
         mBinding.btn.setOnClickListener {
-            client.setSocket(mSocket)
 
             val data = JSONObject()
             data.put("to", "64897db0131c98f765390895") //rider
-            data.put("from", "65f00e0beee998e9e176b5e7")
+            data.put("from", "65f1376beee998e9e176bce0")
             client.startAudioCall(data)
         }
 
@@ -111,17 +111,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun listenSocket() {
-        mSocket.on("call-made", callMade)
+        //mSocket.on("call-made", callMade) //listen from rider
         mSocket.on("answer-made", answerMade)
     }
 
 
     private fun connectSocket() {
         val accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
-        SocketHandler.setSocket(fcmToken)
+        SocketHandler.setSocket(accessToken)
         SocketHandler.establishConnection()
         mSocket = SocketHandler.getSocket()
-        mSocket.emit("joinCustomer", "65f00e0beee998e9e176b5e7")
+        mSocket.emit("joinCustomer", "65f1376beee998e9e176bce0")
 
     }
 
