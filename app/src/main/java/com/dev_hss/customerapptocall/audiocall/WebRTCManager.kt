@@ -90,36 +90,19 @@ class WebRTCManager(private val context: Context) {
 
     fun setSocket(socket: Socket) {
         this.socket = socket
-
-
-        socket.on("call-made") { args ->
-            val sdpOffer =
-                args[0] as JSONObject // Assuming the SDP offer is contained in a JSONObject
-            Log.d(TAG, "setSocket: ${sdpOffer.get("sdp")}")
-
-            // Parse and process the SDP offer as needed
-            val sessionDescription = parseSdpOffer(sdpOffer)
-            // Call receiveSdpFromRemotePeer to handle the SDP offer
-            receiveSdpFromRemotePeer(sessionDescription)
-        }
     }
 
     fun startAudioCall(data: JSONObject) {
 
 
-        mData = data
-
-
-
-
         // Your WebRTCManager class should have a method like this to send SDP to the remote peer
-        fun sendSdpToRemotePeer(sessionDescription: SessionDescription) {
-            // Implement the logic to send the SDP to the remote peer using your signaling mechanism
-            Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.description}")
-            Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.type}")
-            data.put("sdp", sessionDescription)
-            socket.emit("call-other", data)
-        }
+//        fun sendSdpToRemotePeer(sessionDescription: SessionDescription) {
+//            // Implement the logic to send the SDP to the remote peer using your signaling mechanism
+//            Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.description}")
+//            Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.type}")
+//            data.put("sdp", sessionDescription)
+//            socket.emit("call-other", data)
+//        }
 
         // Assuming remotePeerConnection is an instance of your WebRTCManager class
 
@@ -131,7 +114,7 @@ class WebRTCManager(private val context: Context) {
                     object : CustomSdpObserver("setLocalDescription") {}, sessionDescription
                 )
                 // Send the offer SDP to the remote peer through your signaling mechanism
-                sendSdpToRemotePeer(sessionDescription)
+                sendSdpToRemotePeer(sessionDescription, "call-other", data)
             }
         }, MediaConstraints())
 
@@ -166,32 +149,32 @@ class WebRTCManager(private val context: Context) {
 
     }
 
-    private fun receiveSdpFromRemotePeer(sessionDescription: SessionDescription) {
-        // Step 3: Create Answer
-        localPeer?.setRemoteDescription(
-            object : CustomSdpObserver("setRemoteDescription") {}, sessionDescription
-        )
-
-        localPeer?.createAnswer(object : SdpObserver by CustomSdpObserver("createAnswer") {
-            override fun onCreateSuccess(answer: SessionDescription) {
-                // Step 4: Exchange SDP
-                localPeer?.setLocalDescription(
-                    object : CustomSdpObserver("setLocalDescription") {}, answer
-                )
-                // Send the answer SDP to the remote peer through your signaling mechanism
-                sendSdpToRemotePeer(answer)
-                Log.d(TAG, "onCreateSuccess: $answer")
-            }
-
-            override fun onSetFailure(p0: String?) {
-                Log.d(TAG, "onSetFailure: $p0")
-            }
-
-            override fun onSetSuccess() {
-                Log.d(TAG, "onSetSuccess: success")
-            }
-        }, MediaConstraints())
-    }
+//    private fun receiveSdpFromRemotePeer(sessionDescription: SessionDescription) {
+//        // Step 3: Create Answer
+//        localPeer?.setRemoteDescription(
+//            object : CustomSdpObserver("setRemoteDescription") {}, sessionDescription
+//        )
+//
+//        localPeer?.createAnswer(object : SdpObserver by CustomSdpObserver("createAnswer") {
+//            override fun onCreateSuccess(answer: SessionDescription) {
+//                // Step 4: Exchange SDP
+//                localPeer?.setLocalDescription(
+//                    object : CustomSdpObserver("setLocalDescription") {}, answer
+//                )
+//                // Send the answer SDP to the remote peer through your signaling mechanism
+//                sendSdpToRemotePeer(answer)
+//                Log.d(TAG, "onCreateSuccess: $answer")
+//            }
+//
+//            override fun onSetFailure(p0: String?) {
+//                Log.d(TAG, "onSetFailure: $p0")
+//            }
+//
+//            override fun onSetSuccess() {
+//                Log.d(TAG, "onSetSuccess: success")
+//            }
+//        }, MediaConstraints())
+//    }
 
     // Assuming you have a method to receive ICE candidates from the remote peer
     // Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
@@ -202,17 +185,15 @@ class WebRTCManager(private val context: Context) {
 
 
     // Your WebRTCManager class should have a method like this to send SDP to the remote peer
-    fun sendSdpToRemotePeer(sessionDescription: SessionDescription) {
+    fun sendSdpToRemotePeer(
+        sessionDescription: SessionDescription, eventName: String, data: JSONObject
+    ) {
         // Implement the logic to send the SDP to the remote peer using your signaling mechanism
-        Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.description}")
-        Log.d("TAG", "sendSdpToRemotePeer: ${sessionDescription.type}")
-        mData.put("sdp", sessionDescription)
-        socket.emit("call-other", mData)
+        data.put("sdp", sessionDescription.description)
+        socket.emit(eventName, data)
     }
 
     private fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
-        val sdpFrom = sdpOfferJson.getString("from")
-        val sdpTo = sdpOfferJson.getString("to")
         val sdpTypeString = sdpOfferJson.getString("type")
         val sdpDescription = sdpOfferJson.getString("sdp")
         val sdpType = when (sdpTypeString) {
@@ -222,4 +203,60 @@ class WebRTCManager(private val context: Context) {
         }
         return SessionDescription(sdpType, sdpDescription)
     }
+
+    fun receiveOffer(offerJson: JSONObject) {
+        val offer = parseSdpOffer(offerJson)
+        val from = offerJson.getString("from")
+        val to = offerJson.getString("to")
+        // Set remote description
+        localPeer?.setRemoteDescription(
+            object : CustomSdpObserver("setRemoteDescription") {
+                override fun onSetSuccess() {
+                    localPeer?.createAnswer(object :
+                        SdpObserver by CustomSdpObserver("createAnswer") {
+                        override fun onCreateSuccess(sessionDescription: SessionDescription) {
+
+                            localPeer?.setLocalDescription(
+                                CustomSdpObserver("setLocalDescription"), sessionDescription
+                            )
+                            val data = JSONObject()
+                            data.put("to", from)
+                            data.put("from", to)
+                            data.put("type", "answer")
+                            //client.startAudioCall(data)
+                            sendSdpToRemotePeer(sessionDescription, "make-answer", data)
+                            Log.d(TAG, "onCreateSuccess: $sessionDescription")
+                        }
+                    }, MediaConstraints())
+                }
+
+                override fun onCreateFailure(error: String) {
+                    Log.d(TAG, "onCreateFailure: $error")
+                }
+
+                override fun onSetFailure(error: String) {
+                    Log.d(TAG, "onSetFailure: $error")
+                }
+
+
+            }, offer
+        )
+
+        // Create Answer
+//        localPeer?.createAnswer(object : SdpObserver by CustomSdpObserver("createAnswer") {
+//            override fun onCreateSuccess(sessionDescription: SessionDescription) {
+//
+//                localPeer?.setLocalDescription(
+//                    CustomSdpObserver("setLocalDescription"),
+//                    sessionDescription
+//                )
+//
+//                sendSdpToRemotePeer(sessionDescription)
+//                Log.d(TAG, "onCreateSuccess: $sessionDescription")
+//            }
+//        }, MediaConstraints())
+    }
+
 }
+
+

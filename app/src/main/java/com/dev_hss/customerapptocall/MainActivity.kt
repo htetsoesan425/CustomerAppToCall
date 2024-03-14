@@ -29,21 +29,20 @@ class MainActivity : AppCompatActivity() {
     private var fcmToken: String = ""
 
 
-//    private val callMade = Emitter.Listener { args ->
-//        val test = args[0] as JSONObject
-//        Log.d(TAG, "callMade:$test")
-//        try {
-//            val data = args[0] as JSONObject
-//            Log.d(TAG, "callMade:$data")
-//            //client.
-//            //mBinding.tv1.text = data.toString()
-//
-//        } catch (e: JSONException) {
-//            Log.d(TAG, "CallMadeErr-${e.message}")
-//            //mBinding.tv1.text = e.message
-//
-//        }
-//    }
+    private val callMade = Emitter.Listener { args ->
+        val test = args[0] as JSONObject
+        Log.d(TAG, "callMade:$test")
+        try {
+            val offerJson = args[0] as JSONObject
+            Log.d(TAG, "callMade:$offerJson")
+            client.receiveOffer(offerJson)
+
+        } catch (e: JSONException) {
+            Log.d(TAG, "CallMadeErr-${e.message}")
+            //mBinding.tv1.text = e.message
+
+        }
+    }
 
     private val answerMade = Emitter.Listener { args ->
         val data1 = args[0] as JSONObject
@@ -103,7 +102,8 @@ class MainActivity : AppCompatActivity() {
 
             val data = JSONObject()
             data.put("to", "64897db0131c98f765390895") //rider
-            data.put("from", "65f1376beee998e9e176bce0")
+            data.put("from", "65f289b3c2a2cec84d9546a4")
+            data.put("type", "offer")
             client.startAudioCall(data)
         }
 
@@ -111,8 +111,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun listenSocket() {
-        //mSocket.on("call-made", callMade) //listen from rider
+        mSocket.on("call-made", callMade) //listen from rider
         mSocket.on("answer-made", answerMade)
+
+//        socket.on("call-made") { args ->
+//            val sdpOffer =
+//                args[0] as JSONObject // Assuming the SDP offer is contained in a JSONObject
+//            Log.d(WebRTCManager.TAG, "setSocket: ${sdpOffer.get("sdp")}")
+//
+//            // Parse and process the SDP offer as needed
+//            val sessionDescription = parseSdpOffer(sdpOffer)
+//            // Call receiveSdpFromRemotePeer to handle the SDP offer
+//            receiveSdpFromRemotePeer(sessionDescription)
+//        }
     }
 
 
@@ -121,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         SocketHandler.setSocket(accessToken)
         SocketHandler.establishConnection()
         mSocket = SocketHandler.getSocket()
-        mSocket.emit("joinCustomer", "65f1376beee998e9e176bce0")
+        mSocket.emit("joinCustomer", "65f289b3c2a2cec84d9546a4")
 
     }
 
