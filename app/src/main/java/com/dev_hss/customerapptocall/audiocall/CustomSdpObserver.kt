@@ -10,7 +10,8 @@ open class CustomSdpObserver(private val logTag: String) : SdpObserver {
     }
     override fun onCreateSuccess(sessionDescription: SessionDescription) {
         // Implement your logic for a successful SDP creation
-        Log.d(TAG, "onCreateSuccess: $sessionDescription")
+        Log.d(TAG, "onCreateSuccess: ${sessionDescription.description}")
+        Log.d(TAG, "onCreateSuccess: ${sessionDescription.type}")
     }
 
     override fun onSetSuccess() {

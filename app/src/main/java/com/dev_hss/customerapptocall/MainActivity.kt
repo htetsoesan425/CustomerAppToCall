@@ -12,7 +12,6 @@ import com.dev_hss.customerapptocall.socket.SocketHandler
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingService
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONException
@@ -22,6 +21,12 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val TAG = "MainActivity"
     }
+
+
+    private val accessToken =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
+    private val riderId = "64e6c8004aab3aca24c77b8a"
+    private val customerId = "65f3dc54c541784545dfa403"
 
     private lateinit var mBinding: ActivityMainBinding
     private lateinit var mSocket: Socket
@@ -101,8 +106,8 @@ class MainActivity : AppCompatActivity() {
         mBinding.btn.setOnClickListener {
 
             val data = JSONObject()
-            data.put("to", "64897db0131c98f765390895") //rider
-            data.put("from", "65f289b3c2a2cec84d9546a4")
+            data.put("to", riderId) //rider
+            data.put("from", customerId)
             data.put("type", "offer")
             client.startAudioCall(data)
         }
@@ -128,11 +133,10 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun connectSocket() {
-        val accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
         SocketHandler.setSocket(accessToken)
         SocketHandler.establishConnection()
         mSocket = SocketHandler.getSocket()
-        mSocket.emit("joinCustomer", "65f289b3c2a2cec84d9546a4")
+        mSocket.emit("joinCustomer", customerId)
 
     }
 

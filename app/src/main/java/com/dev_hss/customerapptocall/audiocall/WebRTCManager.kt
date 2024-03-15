@@ -141,11 +141,11 @@ class WebRTCManager(private val context: Context) {
 //        }
 //
 //        // Assuming you have a method to receive ICE candidates from the remote peer
-//        // Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
-//        fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
-//            // Step 5: Exchange ICE Candidates
-//            localPeer?.addIceCandidate(iceCandidate)
-//        }
+// Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
+fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
+    // Step 5: Exchange ICE Candidates
+    localPeer?.addIceCandidate(iceCandidate)
+}
 
     }
 
@@ -190,6 +190,7 @@ class WebRTCManager(private val context: Context) {
     ) {
         // Implement the logic to send the SDP to the remote peer using your signaling mechanism
         data.put("sdp", sessionDescription.description)
+        Log.d(TAG, "emit: eventName= $eventName data= $data")
         socket.emit(eventName, data)
     }
 
@@ -225,7 +226,6 @@ class WebRTCManager(private val context: Context) {
                             data.put("type", "answer")
                             //client.startAudioCall(data)
                             sendSdpToRemotePeer(sessionDescription, "make-answer", data)
-                            Log.d(TAG, "onCreateSuccess: $sessionDescription")
                         }
                     }, MediaConstraints())
                 }
