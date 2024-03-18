@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     private val accessToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
     private val riderId = "64e6c8004aab3aca24c77b8a"
-    private val customerId = "65f3dc54c541784545dfa403"
+    private val customerId = "65811f3b5a98a63e45aa13f2"
 
     private lateinit var mBinding: ActivityMainBinding
     private lateinit var mSocket: Socket

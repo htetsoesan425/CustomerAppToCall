@@ -119,7 +119,7 @@ class WebRTCManager(private val context: Context) {
         }, MediaConstraints())
 
 
-//        // Assuming you have a method to receive SDP from the remote peer
+        //        // Assuming you have a method to receive SDP from the remote peer
 //        // Your WebRTCManager class should have a method like this to receive SDP from the remote peer
 //        fun receiveSdpFromRemotePeer(sessionDescription: SessionDescription) {
 //            // Step 3: Create Answer
@@ -142,10 +142,10 @@ class WebRTCManager(private val context: Context) {
 //
 //        // Assuming you have a method to receive ICE candidates from the remote peer
 // Your WebRTCManager class should have a method like this to receive ICE candidates from the remote peer
-fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
-    // Step 5: Exchange ICE Candidates
-    localPeer?.addIceCandidate(iceCandidate)
-}
+        fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
+            // Step 5: Exchange ICE Candidates
+            localPeer?.addIceCandidate(iceCandidate)
+        }
 
     }
 
@@ -209,6 +209,7 @@ fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
         val offer = parseSdpOffer(offerJson)
         val from = offerJson.getString("from")
         val to = offerJson.getString("to")
+        val iceCandidate = offerJson.getString("iceCandidate")
         // Set remote description
         localPeer?.setRemoteDescription(
             object : CustomSdpObserver("setRemoteDescription") {
@@ -255,6 +256,10 @@ fun receiveIceCandidateFromRemotePeer(iceCandidate: IceCandidate) {
 //                Log.d(TAG, "onCreateSuccess: $sessionDescription")
 //            }
 //        }, MediaConstraints())
+    }
+
+    fun addIceCandidate(p0: IceCandidate?) {
+        localPeer?.addIceCandidate(p0)
     }
 
 }
