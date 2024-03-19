@@ -3,7 +3,6 @@ package com.dev_hss.customerapptocall.audiocall
 import android.content.Context
 import android.util.Log
 import com.dev_hss.customerapptocall.MainActivity
-import com.dev_hss.riderappfor360food.utils.audiocall.CustomPeerConnectionObserver
 import com.dev_hss.riderappfor360food.utils.audiocall.CustomSdpObserver
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
@@ -19,7 +18,7 @@ import org.webrtc.PeerConnectionFactory
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 
-class WebRTCManager(private val context: Context) {
+class WebRTCManager(private val context: Context, param: CustomPeerConnectionObserver) {
 
     companion object {
         const val TAG = "WebRTCManager"
@@ -75,7 +74,7 @@ class WebRTCManager(private val context: Context) {
         return peerConnectionFactory?.createPeerConnection(
             configuration,
             constraints,
-            object : CustomPeerConnectionObserver("localPeerCreation") {})
+            object : CustomPeerConnectionObserver() {})
     }
 
     interface IStateChangeListener {
@@ -209,7 +208,7 @@ class WebRTCManager(private val context: Context) {
         val offer = parseSdpOffer(offerJson)
         val from = offerJson.getString("from")
         val to = offerJson.getString("to")
-        val iceCandidate = offerJson.getString("iceCandidate")
+        //val iceCandidate = offerJson.getString("iceCandidate")
         // Set remote description
         localPeer?.setRemoteDescription(
             object : CustomSdpObserver("setRemoteDescription") {

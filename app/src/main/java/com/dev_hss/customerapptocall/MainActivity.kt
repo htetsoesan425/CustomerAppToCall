@@ -6,6 +6,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.dev_hss.customerapptocall.audiocall.CustomPeerConnectionObserver
 import com.dev_hss.customerapptocall.audiocall.WebRTCManager
 import com.dev_hss.customerapptocall.databinding.ActivityMainBinding
 import com.dev_hss.customerapptocall.socket.SocketHandler
@@ -16,6 +17,8 @@ import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONException
 import org.json.JSONObject
+import org.webrtc.IceCandidate
+import org.webrtc.MediaStream
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -100,7 +103,24 @@ class MainActivity : AppCompatActivity() {
 
         connectSocket()
 
-        client = WebRTCManager(this)
+        client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
+            override fun onIceCandidate(iceCandidate: IceCandidate) {
+                super.onIceCandidate(iceCandidate)
+                client.addIceCandidate(iceCandidate)
+
+//                socketRepository?.sendMessageToSocket(
+//                    MessageModel("ice_candidate",userName,target,candidate)
+//                )
+
+            }
+
+            override fun onAddStream(iceCandidate: MediaStream) {
+                super.onAddStream(iceCandidate)
+                //p0?.videoTracks?.get(0)?.addSink(binding.remoteView)
+                Log.d(TAG, "onAddStream: $iceCandidate")
+
+            }
+        })
         client.setSocket(mSocket)
 
         mBinding.btn.setOnClickListener {
@@ -123,8 +143,6 @@ class MainActivity : AppCompatActivity() {
 //            val sdpOffer =
 //                args[0] as JSONObject // Assuming the SDP offer is contained in a JSONObject
 //            Log.d(WebRTCManager.TAG, "setSocket: ${sdpOffer.get("sdp")}")
-//
-//            // Parse and process the SDP offer as needed
 //            val sessionDescription = parseSdpOffer(sdpOffer)
 //            // Call receiveSdpFromRemotePeer to handle the SDP offer
 //            receiveSdpFromRemotePeer(sessionDescription)

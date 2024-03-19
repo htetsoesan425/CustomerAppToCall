@@ -1,4 +1,4 @@
-package com.dev_hss.riderappfor360food.utils.audiocall
+package com.dev_hss.customerapptocall.audiocall
 
 import org.webrtc.DataChannel
 import org.webrtc.IceCandidate
@@ -6,7 +6,7 @@ import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.RtpReceiver
 
-open class CustomPeerConnectionObserver(private val logTag: String) : PeerConnection.Observer {
+open class CustomPeerConnectionObserver() : PeerConnection.Observer {
 
     override fun onIceCandidate(iceCandidate: IceCandidate) {}
 
