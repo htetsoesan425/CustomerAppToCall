@@ -66,6 +66,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+    private val icCandidate = Emitter.Listener { args ->
+        val data1 = args[0] as JSONObject
+        Log.d(TAG, "icCandidate:$data1")
+        try {
+            val receivingCandidate = args[0] as JSONObject
+            Log.d(TAG, "icCandidateJson:$receivingCandidate")
+            //client.addIceCandidate()
+
+//            val receivingCandidate = gson.fromJson(gson.toJson(message.data),
+//                IceCandidateModel::class.java)
+//            rtcClient?.addIceCandidate(IceCandidate(receivingCandidate.sdpMid,
+//                Math.toIntExact(receivingCandidate.sdpMLineIndex.toLong()),receivingCandidate.sdpCandidate))
+        } catch (e: JSONException) {
+            Log.d(TAG, "${e.message}")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -107,10 +125,19 @@ class MainActivity : AppCompatActivity() {
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 super.onIceCandidate(iceCandidate)
                 client.addIceCandidate(iceCandidate)
-
-//                socketRepository?.sendMessageToSocket(
-//                    MessageModel("ice_candidate",userName,target,candidate)
-//                )
+                Log.d(TAG, "onIceCandidate: ${iceCandidate.sdp}")
+                Log.d(TAG, "onIceCandidate: ${iceCandidate.sdp}")
+                Log.d(TAG, "onIceCandidate: ${iceCandidate.sdp}")
+                val candidate = hashMapOf(
+                    "sdpMid" to iceCandidate.sdpMid,
+                    "sdpMLineIndex" to iceCandidate.sdpMLineIndex,
+                    "sdpCandidate" to iceCandidate.sdp
+                )
+                val data = JSONObject()
+                data.put("from", customerId)
+                data.put("to", riderId) //rider
+                data.put("iceCandidate", candidate)
+                mSocket.emit("gather-ice-candidate")
 
             }
 
@@ -138,15 +165,7 @@ class MainActivity : AppCompatActivity() {
     private fun listenSocket() {
         mSocket.on("call-made", callMade) //listen from rider
         mSocket.on("answer-made", answerMade)
-
-//        socket.on("call-made") { args ->
-//            val sdpOffer =
-//                args[0] as JSONObject // Assuming the SDP offer is contained in a JSONObject
-//            Log.d(WebRTCManager.TAG, "setSocket: ${sdpOffer.get("sdp")}")
-//            val sessionDescription = parseSdpOffer(sdpOffer)
-//            // Call receiveSdpFromRemotePeer to handle the SDP offer
-//            receiveSdpFromRemotePeer(sessionDescription)
-//        }
+        mSocket.on("answer-made", icCandidate)
     }
 
 
