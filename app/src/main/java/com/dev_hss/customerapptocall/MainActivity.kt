@@ -112,11 +112,6 @@ class MainActivity : AppCompatActivity() {
         }).addOnFailureListener {
             Log.d(TAG, "failure: $it")
         }
-        //val accessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
-//        SocketHandler.setSocket("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU")
-//        SocketHandler.establishConnection()
-//        mSocket = SocketHandler.getSocket()
-//        mSocket.emit("joinCustomer", "65f00e0beee998e9e176b5e7")
 
 
         connectSocket()
@@ -125,29 +120,25 @@ class MainActivity : AppCompatActivity() {
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 super.onIceCandidate(iceCandidate)
                 client.addIceCandidate(iceCandidate)
-                Log.d(TAG, "onIceCandidate: ${iceCandidate.sdp}")
-                Log.d(TAG, "onIceCandidate: ${iceCandidate.sdp}")
-                Log.d(TAG, "onIceCandidate: ${iceCandidate.sdp}")
-                val candidate = hashMapOf(
-                    "sdpMid" to iceCandidate.sdpMid,
-                    "sdpMLineIndex" to iceCandidate.sdpMLineIndex,
-                    "sdpCandidate" to iceCandidate.sdp
-                )
-                val data = JSONObject()
-                data.put("from", customerId)
-                data.put("to", riderId) //rider
-                data.put("iceCandidate", candidate)
-                mSocket.emit("gather-ice-candidate")
+                val candidateJson = JSONObject().apply {
+                    put("sdpMid", iceCandidate.sdpMid)
+                    put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
+                    put("candidate", iceCandidate.sdp)
+                }
+                mSocket.emit("iceCandidate", candidateJson)
+                // Send ICE candidate to the other peer
+
 
             }
 
-            override fun onAddStream(iceCandidate: MediaStream) {
-                super.onAddStream(iceCandidate)
+            override fun onAddStream(p0: MediaStream) {
+                super.onAddStream(p0)
                 //p0?.videoTracks?.get(0)?.addSink(binding.remoteView)
-                Log.d(TAG, "onAddStream: $iceCandidate")
+                Log.d(TAG, "onAddStream: $p0")
 
             }
         })
+
         client.setSocket(mSocket)
 
         mBinding.btn.setOnClickListener {
