@@ -38,38 +38,42 @@ class MainActivity : AppCompatActivity() {
 
 
     private val callMade = Emitter.Listener { args ->
-        val test = args[0] as JSONObject
-        Log.d(TAG, "callMade:$test")
         try {
-            val offerJson = args[0] as JSONObject
-            Log.d(TAG, "callMade:$offerJson")
-            client.receiveOffer(offerJson)
+            val data = args[0] as JSONObject
+            Log.d(TAG, "callMade:$data")
+            client.call(data)
 
         } catch (e: JSONException) {
             Log.d(TAG, "CallMadeErr-${e.message}")
-            //mBinding.tv1.text = e.message
-
         }
     }
 
     private val answerMade = Emitter.Listener { args ->
-        val data1 = args[0] as JSONObject
-        Log.d(TAG, "answerMade:$data1")
         try {
             val data = args[0] as JSONObject
             Log.d(TAG, "answerMade:$data")
-            //mBinding.tv2.text = data.toString()
+            client.receive(data)
+
         } catch (e: JSONException) {
             Log.d(TAG, "answerMadeErr-${e.message}")
-            //mBinding.tv2.text = e.message
 
+        }
+    }
+
+
+    private val answerReceived = Emitter.Listener { args ->
+        try {
+            val data = args[0] as JSONObject
+            Log.d(TAG, "answerReceived:$data")
+            //mBinding.tv2.text = data.toString()
+        } catch (e: JSONException) {
+            Log.d(TAG, "answerReceivedErr-${e.message}")
+            //mBinding.tv2.text = e.message
         }
     }
 
 
     private val icCandidate = Emitter.Listener { args ->
-        val data1 = args[0] as JSONObject
-        Log.d(TAG, "icCandidate:$data1")
         try {
             val receivingCandidate = args[0] as JSONObject
             Log.d(TAG, "icCandidateJson:$receivingCandidate")
@@ -147,7 +151,7 @@ class MainActivity : AppCompatActivity() {
             data.put("to", riderId) //rider
             data.put("from", customerId)
             data.put("type", "offer")
-            client.startAudioCall(data)
+            client.call(data)
         }
 
         listenSocket()
@@ -156,7 +160,8 @@ class MainActivity : AppCompatActivity() {
     private fun listenSocket() {
         mSocket.on("call-made", callMade) //listen from rider
         mSocket.on("answer-made", answerMade)
-        mSocket.on("answer-made", icCandidate)
+        mSocket.on("answer-response", answerReceived)
+        mSocket.on("ice-candidate-response", icCandidate)
     }
 
 
