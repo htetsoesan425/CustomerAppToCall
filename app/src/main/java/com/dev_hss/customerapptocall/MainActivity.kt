@@ -19,12 +19,12 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
+import org.webrtc.SessionDescription
 
 class MainActivity : AppCompatActivity() {
     companion object {
         const val TAG = "MainActivity"
     }
-
 
     private val accessToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
@@ -65,7 +65,10 @@ class MainActivity : AppCompatActivity() {
         try {
             val data = args[0] as JSONObject
             Log.d(TAG, "answerReceived:$data")
-            //mBinding.tv2.text = data.toString()
+            val session = SessionDescription(
+                SessionDescription.Type.ANSWER, data.getString("sdp")
+            )
+            client.onRemoteSessionReceived(session)
         } catch (e: JSONException) {
             Log.d(TAG, "answerReceivedErr-${e.message}")
             //mBinding.tv2.text = e.message
@@ -121,6 +124,7 @@ class MainActivity : AppCompatActivity() {
         connectSocket()
 
         client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
+
             override fun onIceCandidate(iceCandidate: IceCandidate) {
                 super.onIceCandidate(iceCandidate)
                 client.addIceCandidate(iceCandidate)
@@ -141,9 +145,7 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "onAddStream: $p0")
 
             }
-        })
-
-        client.setSocket(mSocket)
+        }, mSocket)
 
         mBinding.btn.setOnClickListener {
 
