@@ -7,8 +7,9 @@ import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONException
 import org.json.JSONObject
-import org.webrtc.AudioSource
 import org.webrtc.AudioTrack
+import org.webrtc.Camera2Enumerator
+import org.webrtc.CameraVideoCapturer
 import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.EglBase
@@ -18,9 +19,12 @@ import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import org.webrtc.SurfaceTextureHelper
+import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoTrack
 
 class WebRTCManager(
-    application: Application,
+    private val application: Application,
     private val customPeerConnectionObserver: CustomPeerConnectionObserver,
     private val socket: Socket
 ) {
@@ -35,8 +39,12 @@ class WebRTCManager(
         PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
     )
     private val peerConnection by lazy { createPeerConnection(customPeerConnectionObserver) }
-    private var localAudioSource: AudioSource? = null
     private var localAudioTrack: AudioTrack? = null
+    private var videoCapturer: CameraVideoCapturer? = null
+    private var localVideoTrack: VideoTrack? = null
+    private val localVideoSource by lazy { peerConnectionFactory.createVideoSource(false) }
+    private val localAudioSource by lazy { peerConnectionFactory.createAudioSource(MediaConstraints()) }
+
     private val callMade = Emitter.Listener { args ->
         val test = args[0] as JSONObject
         Log.d(MainActivity.TAG, "callMade:$test")
@@ -89,7 +97,7 @@ class WebRTCManager(
 
     fun call(data: JSONObject) {
         val mediaConstraints = MediaConstraints()
-        //mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
 
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
@@ -143,7 +151,7 @@ class WebRTCManager(
         socket.emit(eventName, data)
     }
 
-    fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
+    private fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
         val sdpTypeString = sdpOfferJson.getString("type")
         val sdpDescription = sdpOfferJson.getString("sdp")
         val sdpType = when (sdpTypeString) {
@@ -162,7 +170,7 @@ class WebRTCManager(
         val to = offerJson.getString("to")
 
         val constraints = MediaConstraints()
-        //constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
 
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(answer: SessionDescription) {
@@ -234,6 +242,53 @@ class WebRTCManager(
 
     }
 
+
+    private fun createPeerConnection(observer: PeerConnection.Observer): PeerConnection? {
+        return peerConnectionFactory.createPeerConnection(iceServer, observer)
+    }
+
+    fun initializeSurfaceView(surface: SurfaceViewRenderer) {
+        surface.run {
+            setEnableHardwareScaler(true)
+            setMirror(true)
+            init(eglContext.eglBaseContext, null)
+        }
+    }
+
+    fun startLocalVideo(surface: SurfaceViewRenderer) {
+        val surfaceTextureHelper =
+            SurfaceTextureHelper.create(Thread.currentThread().name, eglContext.eglBaseContext)
+        videoCapturer = getVideoCapturer(application)
+        videoCapturer?.initialize(
+            surfaceTextureHelper,
+            surface.context, localVideoSource.capturerObserver
+        )
+        videoCapturer?.startCapture(320, 240, 30)
+        localVideoTrack = peerConnectionFactory.createVideoTrack("local_track", localVideoSource)
+        localVideoTrack?.addSink(surface)
+        localAudioTrack =
+            peerConnectionFactory.createAudioTrack("local_track_audio", localAudioSource)
+        val localStream = peerConnectionFactory.createLocalMediaStream("local_stream")
+
+        localStream.addTrack(localAudioTrack)
+        localStream.addTrack(localVideoTrack)
+        peerConnection?.addStream(localStream)
+
+    }
+
+    private fun getVideoCapturer(application: Application): CameraVideoCapturer {
+        return Camera2Enumerator(application).run {
+            deviceNames.find {
+                isFrontFacing(it)
+            }?.let {
+                createCapturer(it, null)
+            } ?: throw IllegalStateException()
+        }
+    }
+
+    fun endCall() {
+        peerConnection?.close()
+    }
 }
 
 

@@ -1,7 +1,10 @@
 package com.dev_hss.customerapptocall
 
+import android.Manifest
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -13,6 +16,7 @@ import com.dev_hss.customerapptocall.socket.SocketHandler
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
+import com.permissionx.guolindev.PermissionX
 import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONException
@@ -38,56 +42,68 @@ class MainActivity : AppCompatActivity() {
 
 
     private val callMade = Emitter.Listener { args ->
-        try {
-            val data = args[0] as JSONObject
-            Log.d(TAG, "callMade:$data")
-            client.call(data)
+        runOnUiThread {
+            try {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "callMade:$data")
+                setCallLayoutVisible()
+                client.initializeSurfaceView(mBinding.localView)
+                client.initializeSurfaceView(mBinding.remoteView)
+                client.startLocalVideo(mBinding.localView)
+                client.call(data)
 
-        } catch (e: JSONException) {
-            Log.d(TAG, "CallMadeErr-${e.message}")
+            } catch (e: JSONException) {
+                Log.d(TAG, "CallMadeErr-${e.message}")
+            }
         }
     }
 
     private val answerMade = Emitter.Listener { args ->
-        try {
-            val data = args[0] as JSONObject
-            Log.d(TAG, "answerMade:$data")
-            client.receive(data)
+        runOnUiThread {
+            try {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "answerMade:$data")
+                client.receive(data)
 
-        } catch (e: JSONException) {
-            Log.d(TAG, "answerMadeErr-${e.message}")
+            } catch (e: JSONException) {
+                Log.d(TAG, "answerMadeErr-${e.message}")
 
+            }
         }
     }
 
 
     private val answerReceived = Emitter.Listener { args ->
-        try {
-            val data = args[0] as JSONObject
-            Log.d(TAG, "answerReceived:$data")
-            val session = SessionDescription(
-                SessionDescription.Type.ANSWER, data.getString("sdp")
-            )
-            client.onRemoteSessionReceived(session)
-        } catch (e: JSONException) {
-            Log.d(TAG, "answerReceivedErr-${e.message}")
-            //mBinding.tv2.text = e.message
+        runOnUiThread {
+            try {
+                val data = args[0] as JSONObject
+                Log.d(TAG, "answerReceived:$data")
+                val session = SessionDescription(
+                    SessionDescription.Type.ANSWER, data.getString("sdp")
+                )
+                client.onRemoteSessionReceived(session)
+            } catch (e: JSONException) {
+                Log.d(TAG, "answerReceivedErr-${e.message}")
+                //mBinding.tv2.text = e.message
+            }
         }
     }
 
 
     private val icCandidate = Emitter.Listener { args ->
-        try {
-            val receivingCandidate = args[0] as JSONObject
-            Log.d(TAG, "icCandidateJson:$receivingCandidate")
-            //client.addIceCandidate()
+        runOnUiThread {
+            try {
+                val receivingCandidate = args[0] as JSONObject
+                Log.d(TAG, "icCandidateJson:$receivingCandidate")
+                //client.addIceCandidate()
 
 //            val receivingCandidate = gson.fromJson(gson.toJson(message.data),
 //                IceCandidateModel::class.java)
 //            rtcClient?.addIceCandidate(IceCandidate(receivingCandidate.sdpMid,
 //                Math.toIntExact(receivingCandidate.sdpMLineIndex.toLong()),receivingCandidate.sdpCandidate))
-        } catch (e: JSONException) {
-            Log.d(TAG, "${e.message}")
+            } catch (e: JSONException) {
+                Log.d(TAG, "${e.message}")
+            }
         }
     }
 
@@ -123,40 +139,49 @@ class MainActivity : AppCompatActivity() {
 
         connectSocket()
 
-        client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
-
-            override fun onIceCandidate(iceCandidate: IceCandidate) {
-                super.onIceCandidate(iceCandidate)
-                client.addIceCandidate(iceCandidate)
-                val candidateJson = JSONObject().apply {
-                    put("sdpMid", iceCandidate.sdpMid)
-                    put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
-                    put("candidate", iceCandidate.sdp)
-                }
-                mSocket.emit("iceCandidate", candidateJson)
-                // Send ICE candidate to the other peer
 
 
-            }
-
-            override fun onAddStream(p0: MediaStream) {
-                super.onAddStream(p0)
-                //p0?.videoTracks?.get(0)?.addSink(binding.remoteView)
-                Log.d(TAG, "onAddStream: $p0")
-
-            }
-        }, mSocket)
-
-        mBinding.btn.setOnClickListener {
-
-            val data = JSONObject()
-            data.put("to", riderId) //rider
-            data.put("from", customerId)
-            data.put("type", "offer")
-            client.call(data)
+        mBinding.endCallButton.setOnClickListener {
+            client.endCall()
         }
 
-        listenSocket()
+
+        PermissionX.init(this)
+            .permissions(
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.CAMERA
+            ).request { allGranted, _, _ ->
+                if (allGranted) {
+                    listenSocket()
+
+                    client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
+
+                        override fun onIceCandidate(iceCandidate: IceCandidate) {
+                            super.onIceCandidate(iceCandidate)
+                            client.addIceCandidate(iceCandidate)
+                            val candidateJson = JSONObject().apply {
+                                put("sdpMid", iceCandidate.sdpMid)
+                                put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
+                                put("candidate", iceCandidate.sdp)
+                            }
+                            mSocket.emit("iceCandidate", candidateJson)
+                            // Send ICE candidate to the other peer
+
+
+                        }
+
+                        override fun onAddStream(p0: MediaStream) {
+                            super.onAddStream(p0)
+                            p0.videoTracks?.get(0)?.addSink(mBinding.remoteView)
+                            Log.d(TAG, "onAddStream: $p0")
+
+                        }
+                    }, mSocket)
+                } else {
+                    Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
+                        .show()
+                }
+            }
     }
 
     private fun listenSocket() {
@@ -180,4 +205,7 @@ class MainActivity : AppCompatActivity() {
         mSocket.close()
     }
 
+    private fun setCallLayoutVisible() {
+        mBinding.callLayout.visibility = View.VISIBLE
+    }
 }

@@ -12,9 +12,11 @@ appcompat = "1.6.1"
 material = "1.11.0"
 activity = "1.8.0"
 constraintlayout = "2.1.4"
+permissionx = "1.6.1"
 socketIoClient = "2.0.0"
 googleServices = "4.4.1"
 firebaseMessagingKtx = "23.4.1"
+webrtc = "1.0.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,8 +30,10 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+permissionx = { module = "com.guolindev.permissionx:permissionx", version.ref = "permissionx" }
 socket-io-client = { module = "io.socket:socket.io-client", version.ref = "socketIoClient" }
 firebase-messaging-ktx = { group = "com.google.firebase", name = "firebase-messaging-ktx", version.ref = "firebaseMessagingKtx" }
+webrtc = { module = "com.mesibo.api:webrtc", version.ref = "webrtc" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
