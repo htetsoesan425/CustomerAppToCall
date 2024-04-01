@@ -97,7 +97,14 @@ class WebRTCManager(
 
     fun call(data: JSONObject) {
         val mediaConstraints = MediaConstraints()
-        mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        // Modify constraints for audio-only call
+        mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+        mediaConstraints.mandatory.add(
+            MediaConstraints.KeyValuePair(
+                "OfferToReceiveVideo",
+                "false"
+            )
+        )
 
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
@@ -170,7 +177,8 @@ class WebRTCManager(
         val to = offerJson.getString("to")
 
         val constraints = MediaConstraints()
-        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"))
+        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
+        constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
 
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(answer: SessionDescription) {
@@ -245,9 +253,9 @@ class WebRTCManager(
     }
 
 
-    private fun createPeerConnection(observer: PeerConnection.Observer): PeerConnection? {
-        return peerConnectionFactory.createPeerConnection(iceServer, observer)
-    }
+//    private fun createPeerConnection(observer: PeerConnection.Observer): PeerConnection? {
+//        return peerConnectionFactory.createPeerConnection(iceServer, observer)
+//    }
 
     fun initializeSurfaceView(surface: SurfaceViewRenderer) {
         surface.run {
@@ -287,8 +295,24 @@ class WebRTCManager(
         }
     }
 
+    fun startLocalAudio() {
+        // Start capturing and sending local audio
+        val localStream = peerConnectionFactory.createLocalMediaStream("local_audio_stream")
+        localAudioTrack =
+            peerConnectionFactory.createAudioTrack("local_audio_track", localAudioSource)
+        localStream.addTrack(localAudioTrack)
+
+        // Add the local audio stream to the PeerConnection
+        peerConnection?.addStream(localStream)
+
+    }
+
     fun endCall() {
         peerConnection?.close()
+    }
+
+    fun toggleAudio(mute: Boolean) {
+        localAudioTrack?.setEnabled(mute)
     }
 }
 

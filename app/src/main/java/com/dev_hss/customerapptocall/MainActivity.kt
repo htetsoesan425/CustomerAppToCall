@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.dev_hss.customerapptocall.audiocall.CustomPeerConnectionObserver
+import com.dev_hss.customerapptocall.audiocall.RTCAudioManager
 import com.dev_hss.customerapptocall.audiocall.WebRTCManager
 import com.dev_hss.customerapptocall.databinding.ActivityMainBinding
 import com.dev_hss.customerapptocall.socket.SocketHandler
@@ -40,7 +41,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mSocket: Socket
     private lateinit var client: WebRTCManager
     private var fcmToken: String = ""
-
+    private var isMute = false
+    private var isCameraPause = false
+    private val rtcAudioManager by lazy { RTCAudioManager.create(this) }
+    private var isSpeakerMode = true
 
     private val callMade = Emitter.Listener { args ->
         runOnUiThread {
@@ -142,8 +146,54 @@ class MainActivity : AppCompatActivity() {
 
 
         connectSocket()
+        listenSocket()
+
+        PermissionX.init(this).permissions(
+            Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA
+        ).request { allGranted, _, _ ->
+            if (allGranted) {
+
+                client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
+
+                    override fun onIceCandidate(iceCandidate: IceCandidate) {
+                        super.onIceCandidate(iceCandidate)
+                        client.addIceCandidate(iceCandidate)
+                        val candidateJson = JSONObject().apply {
+                            put("sdpMid", iceCandidate.sdpMid)
+                            put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
+                            put("sdpCandidate", iceCandidate.sdp)
+                        }
+                        val data = JSONObject()
+                        data.put("from", customerId)
+                        data.put("to", riderId)
+                        data.put("iceCandidate", candidateJson)
+                        mSocket.emit("gather-ice-candidate", data)
+
+                        // Send ICE candidate to the other peer
 
 
+                    }
+
+                    override fun onAddStream(p0: MediaStream) {
+                        super.onAddStream(p0)
+//                            p0.videoTracks?.get(0)?.addSink(mBinding.remoteView)
+//                            Log.d(TAG, "onAddStream: $p0")
+
+                        val remoteAudioTrack = p0.audioTracks.firstOrNull()
+                        remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
+
+                        // Handle the remote audio track as needed
+                        // For example, if you want to render the remote audio, you can use an AudioTrackSink
+                        // Here's a hypothetical example:
+                        // remoteAudioTrack?.addSink(remoteAudioSink)
+
+                    }
+                }, mSocket)
+            } else {
+                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
 
         mBinding.endCallButton.setOnClickListener {
             client.endCall()
@@ -152,55 +202,45 @@ class MainActivity : AppCompatActivity() {
         mBinding.acceptButton.setOnClickListener {
             setIncomingCallLayoutGone()
             setCallLayoutVisible()
-            client.initializeSurfaceView(mBinding.localView)
-            client.initializeSurfaceView(mBinding.remoteView)
-            client.startLocalVideo(mBinding.localView)
+//            client.initializeSurfaceView(mBinding.localView)
+//            client.initializeSurfaceView(mBinding.remoteView)
+//            client.startLocalVideo(mBinding.localView)
+            client.startLocalAudio()
             client.call(mData)
 
         }
 
-        listenSocket()
-
-        PermissionX.init(this)
-            .permissions(
-                Manifest.permission.RECORD_AUDIO,
-                Manifest.permission.CAMERA
-            ).request { allGranted, _, _ ->
-                if (allGranted) {
-
-                    client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
-
-                        override fun onIceCandidate(iceCandidate: IceCandidate) {
-                            super.onIceCandidate(iceCandidate)
-                            client.addIceCandidate(iceCandidate)
-                            val candidateJson = JSONObject().apply {
-                                put("sdpMid", iceCandidate.sdpMid)
-                                put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
-                                put("sdpCandidate", iceCandidate.sdp)
-                            }
-                            val data = JSONObject()
-                            data.put("from", customerId)
-                            data.put("to", riderId)
-                            data.put("iceCandidate", candidateJson)
-                            mSocket.emit("gather-ice-candidate", data)
-
-                            // Send ICE candidate to the other peer
-
-
-                        }
-
-                        override fun onAddStream(p0: MediaStream) {
-                            super.onAddStream(p0)
-                            p0.videoTracks?.get(0)?.addSink(mBinding.remoteView)
-                            Log.d(TAG, "onAddStream: $p0")
-
-                        }
-                    }, mSocket)
-                } else {
-                    Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
-                        .show()
-                }
+        mBinding.micButton.setOnClickListener {
+            if (isMute) {
+                isMute = false
+                mBinding.micButton.setImageResource(R.drawable.ic_baseline_mic_off_24)
+            } else {
+                isMute = true
+                mBinding.micButton.setImageResource(R.drawable.ic_baseline_mic_24)
             }
+            client.toggleAudio(isMute)
+        }
+
+        mBinding.audioOutputButton.setOnClickListener {
+            if (isSpeakerMode) {
+                isSpeakerMode = false
+                mBinding.audioOutputButton.setImageResource(R.drawable.ic_baseline_hearing_24)
+                rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.EARPIECE)
+            } else {
+                isSpeakerMode = true
+                mBinding.audioOutputButton.setImageResource(R.drawable.ic_baseline_speaker_up_24)
+                rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
+            }
+
+        }
+
+        mBinding.endCallButton.setOnClickListener {
+            setCallLayoutGone()
+            setWhoToCallLayoutVisible()
+            setIncomingCallLayoutGone()
+            setWhoToCallLayoutGone()
+            client.endCall()
+        }
     }
 
     private fun listenSocket() {
@@ -230,6 +270,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun setIncomingCallLayoutVisible() {
         mBinding.incomingCallLayout.visibility = View.VISIBLE
+    }
+
+    private fun setCallLayoutGone() {
+        mBinding.callLayout.visibility = View.GONE
+    }
+
+
+    private fun setWhoToCallLayoutGone() {
+        mBinding.whoToCallLayout.visibility = View.GONE
+    }
+
+    private fun setWhoToCallLayoutVisible() {
+        mBinding.whoToCallLayout.visibility = View.VISIBLE
     }
 
     private fun setIncomingCallLayoutGone() {

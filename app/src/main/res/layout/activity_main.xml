@@ -121,10 +121,10 @@
                 android:focusable="true"
                 android:padding="12dp"
                 app:backgroundTint="@color/cardview_dark_background"
-                app:srcCompat="@drawable/baseline_mic_24" />
+                app:srcCompat="@drawable/ic_baseline_mic_24" />
 
             <ImageView
-                android:id="@+id/video_button"
+                android:id="@+id/audioOutputButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
@@ -133,7 +133,7 @@
                 android:focusable="true"
                 android:padding="12dp"
                 app:backgroundTint="@color/cardview_dark_background"
-                app:srcCompat="@drawable/baseline_mic_24" />
+                app:srcCompat="@drawable/ic_baseline_speaker_up_24" />
 
             <ImageView
                 android:id="@+id/end_call_button"
