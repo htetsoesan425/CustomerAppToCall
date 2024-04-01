@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         const val TAG = "MainActivity"
     }
 
+    private lateinit var mData: JSONObject
     private val accessToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY1ODExZjNiNWE5OGE2M2U0NWFhMTNmMiIsIm5hbWUiOiJIdGV0IFNhbiIsImVtYWlsIjoiIiwidXNlciI6Ijk1OTk4NDQ1ODk2OSIsInJ0b2tlbiI6Ik1CbC9BTWhuRURCNzBubC84U2xVVmZmaytJd256WnFKcEtiMGNZOEsyaTIvb0FvNEtXNGI5citGaW91dDFjVnpPbnQ1V3F2V0lldTh3cVNYIiwiaWF0IjoxNzAyOTYwOTk2LCJleHAiOjE3MzQwNjQ5OTZ9.xf_m8zuoPAOsPlin9kng_C8RfiV1r7JdhLZf1weDuWU" //customer
     private val riderId = "64e6c8004aab3aca24c77b8a"
@@ -46,11 +47,12 @@ class MainActivity : AppCompatActivity() {
             try {
                 val data = args[0] as JSONObject
                 Log.d(TAG, "callMade:$data")
-                setCallLayoutVisible()
-                client.initializeSurfaceView(mBinding.localView)
-                client.initializeSurfaceView(mBinding.remoteView)
-                client.startLocalVideo(mBinding.localView)
-                client.call(data)
+                setIncomingCallLayoutVisible()
+//                client.initializeSurfaceView(mBinding.localView)
+//                client.initializeSurfaceView(mBinding.remoteView)
+//                client.startLocalVideo(mBinding.localView)
+//                client.call(data)
+                mData = data
 
             } catch (e: JSONException) {
                 Log.d(TAG, "CallMadeErr-${e.message}")
@@ -91,19 +93,21 @@ class MainActivity : AppCompatActivity() {
 
 
     private val icCandidate = Emitter.Listener { args ->
-        runOnUiThread {
-            try {
-                val receivingCandidate = args[0] as JSONObject
-                Log.d(TAG, "icCandidateJson:$receivingCandidate")
-                //client.addIceCandidate()
-
-//            val receivingCandidate = gson.fromJson(gson.toJson(message.data),
-//                IceCandidateModel::class.java)
-//            rtcClient?.addIceCandidate(IceCandidate(receivingCandidate.sdpMid,
-//                Math.toIntExact(receivingCandidate.sdpMLineIndex.toLong()),receivingCandidate.sdpCandidate))
-            } catch (e: JSONException) {
-                Log.d(TAG, "${e.message}")
-            }
+        val data1 = args[0] as JSONObject
+        Log.d(TAG, "icCandidate:$data1")
+        try {
+            val data = args[0] as JSONObject
+            val receivingCandidate = data.getJSONObject("iceCandidate")
+            Log.d(TAG, "icCandidateJson:$receivingCandidate")
+            client.addIceCandidate(
+                IceCandidate(
+                    receivingCandidate.getString("sdpMid"),
+                    Math.toIntExact(receivingCandidate.getString("sdpMLineIndex").toLong()),
+                    receivingCandidate.getString("sdpCandidate")
+                )
+            )
+        } catch (e: JSONException) {
+            Log.d(TAG, "${e.message}")
         }
     }
 
@@ -145,6 +149,17 @@ class MainActivity : AppCompatActivity() {
             client.endCall()
         }
 
+        mBinding.acceptButton.setOnClickListener {
+            setIncomingCallLayoutGone()
+            setCallLayoutVisible()
+            client.initializeSurfaceView(mBinding.localView)
+            client.initializeSurfaceView(mBinding.remoteView)
+            client.startLocalVideo(mBinding.localView)
+            client.call(mData)
+
+        }
+
+        listenSocket()
 
         PermissionX.init(this)
             .permissions(
@@ -152,7 +167,6 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.CAMERA
             ).request { allGranted, _, _ ->
                 if (allGranted) {
-                    listenSocket()
 
                     client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
 
@@ -162,9 +176,14 @@ class MainActivity : AppCompatActivity() {
                             val candidateJson = JSONObject().apply {
                                 put("sdpMid", iceCandidate.sdpMid)
                                 put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
-                                put("candidate", iceCandidate.sdp)
+                                put("sdpCandidate", iceCandidate.sdp)
                             }
-                            mSocket.emit("iceCandidate", candidateJson)
+                            val data = JSONObject()
+                            data.put("from", customerId)
+                            data.put("to", riderId)
+                            data.put("iceCandidate", candidateJson)
+                            mSocket.emit("gather-ice-candidate", data)
+
                             // Send ICE candidate to the other peer
 
 
@@ -207,5 +226,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun setCallLayoutVisible() {
         mBinding.callLayout.visibility = View.VISIBLE
+    }
+
+    private fun setIncomingCallLayoutVisible() {
+        mBinding.incomingCallLayout.visibility = View.VISIBLE
+    }
+
+    private fun setIncomingCallLayoutGone() {
+        mBinding.incomingCallLayout.visibility = View.GONE
     }
 }

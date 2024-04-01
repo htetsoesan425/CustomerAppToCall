@@ -211,6 +211,8 @@ class WebRTCManager(
 
     fun addIceCandidate(p0: IceCandidate?) {
         peerConnection?.addIceCandidate(p0)
+        Log.d(TAG, "addIceCandidate: added $p0")
+
     }
 
     fun onRemoteSessionReceived(sdp: SessionDescription) {
@@ -269,11 +271,10 @@ class WebRTCManager(
         localAudioTrack =
             peerConnectionFactory.createAudioTrack("local_track_audio", localAudioSource)
         val localStream = peerConnectionFactory.createLocalMediaStream("local_stream")
-
         localStream.addTrack(localAudioTrack)
         localStream.addTrack(localVideoTrack)
-        peerConnection?.addStream(localStream)
 
+        peerConnection?.addStream(localStream)
     }
 
     private fun getVideoCapturer(application: Application): CameraVideoCapturer {
