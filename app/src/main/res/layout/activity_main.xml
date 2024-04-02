@@ -73,21 +73,27 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <org.webrtc.SurfaceViewRenderer
-            android:id="@+id/remote_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+        <TextView
+            android:id="@+id/tvName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="32dp"
+            android:text="Rider"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-        <org.webrtc.SurfaceViewRenderer
-            android:id="@+id/local_view"
-            android:layout_width="120dp"
-            android:layout_height="150dp"
-            android:layout_above="@+id/controls"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="8dp"
-            android:elevation="16dp" />
+        <TextView
+            android:id="@+id/callDurationTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvName"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="16dp"
+            android:text="00:00"
+            android:textColor="@android:color/black"
+            android:textSize="16sp" />
 
         <ProgressBar
             android:id="@+id/remote_view_loading"
@@ -95,11 +101,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:indeterminate="true"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="@id/remote_view"
-            app:layout_constraintEnd_toEndOf="@id/remote_view"
-            app:layout_constraintStart_toStartOf="@id/remote_view"
-            app:layout_constraintTop_toTopOf="@id/remote_view" />
+            android:visibility="gone" />
 
         <LinearLayout
             android:id="@+id/controls"

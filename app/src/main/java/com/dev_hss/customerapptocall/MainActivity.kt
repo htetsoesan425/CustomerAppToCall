@@ -25,6 +25,8 @@ import org.json.JSONObject
 import org.webrtc.IceCandidate
 import org.webrtc.MediaStream
 import org.webrtc.SessionDescription
+import java.util.Timer
+import java.util.TimerTask
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -45,6 +47,8 @@ class MainActivity : AppCompatActivity() {
     private var isCameraPause = false
     private val rtcAudioManager by lazy { RTCAudioManager.create(this) }
     private var isSpeakerMode = true
+    private var callStartTime: Long = 0
+    private var callDurationTimer: Timer? = null
 
     private val callMade = Emitter.Listener { args ->
         runOnUiThread {
@@ -52,10 +56,6 @@ class MainActivity : AppCompatActivity() {
                 val data = args[0] as JSONObject
                 Log.d(TAG, "callMade:$data")
                 setIncomingCallLayoutVisible()
-//                client.initializeSurfaceView(mBinding.localView)
-//                client.initializeSurfaceView(mBinding.remoteView)
-//                client.startLocalVideo(mBinding.localView)
-//                client.call(data)
                 mData = data
 
             } catch (e: JSONException) {
@@ -70,6 +70,7 @@ class MainActivity : AppCompatActivity() {
                 val data = args[0] as JSONObject
                 Log.d(TAG, "answerMade:$data")
                 client.receive(data)
+                startCallDurationTimer()
 
             } catch (e: JSONException) {
                 Log.d(TAG, "answerMadeErr-${e.message}")
@@ -88,6 +89,7 @@ class MainActivity : AppCompatActivity() {
                     SessionDescription.Type.ANSWER, data.getString("sdp")
                 )
                 client.onRemoteSessionReceived(session)
+
             } catch (e: JSONException) {
                 Log.d(TAG, "answerReceivedErr-${e.message}")
                 //mBinding.tv2.text = e.message
@@ -112,6 +114,23 @@ class MainActivity : AppCompatActivity() {
             )
         } catch (e: JSONException) {
             Log.d(TAG, "${e.message}")
+        }
+    }
+
+    private val onEndCall = Emitter.Listener { args ->
+        runOnUiThread {
+            val data1 = args[0] as JSONObject
+            Log.d(TAG, "onEndCall:$data1")
+            try {
+                val data = args[0] as JSONObject
+                setCallLayoutGone()
+                setWhoToCallLayoutVisible()
+                setIncomingCallLayoutGone()
+                stopCallDurationTimer()
+                client.endCall()
+            } catch (e: JSONException) {
+                Log.d(TAG, "${e.message}")
+            }
         }
     }
 
@@ -176,18 +195,10 @@ class MainActivity : AppCompatActivity() {
 
                     override fun onAddStream(p0: MediaStream) {
                         super.onAddStream(p0)
-//                            p0.videoTracks?.get(0)?.addSink(mBinding.remoteView)
-//                            Log.d(TAG, "onAddStream: $p0")
-
                         val remoteAudioTrack = p0.audioTracks.firstOrNull()
                         remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
-
-                        // Handle the remote audio track as needed
-                        // For example, if you want to render the remote audio, you can use an AudioTrackSink
-                        // Here's a hypothetical example:
-                        // remoteAudioTrack?.addSink(remoteAudioSink)
-
                     }
+
                 }, mSocket)
             } else {
                 Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
@@ -195,16 +206,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        mBinding.endCallButton.setOnClickListener {
-            client.endCall()
-        }
-
         mBinding.acceptButton.setOnClickListener {
             setIncomingCallLayoutGone()
             setCallLayoutVisible()
-//            client.initializeSurfaceView(mBinding.localView)
-//            client.initializeSurfaceView(mBinding.remoteView)
-//            client.startLocalVideo(mBinding.localView)
             client.startLocalAudio()
             client.call(mData)
 
@@ -235,10 +239,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         mBinding.endCallButton.setOnClickListener {
+            val data = JSONObject()
+            data.put("from", customerId)
+            data.put("to", riderId)
+            mSocket.emit("call-end", data)
+
             setCallLayoutGone()
             setWhoToCallLayoutVisible()
             setIncomingCallLayoutGone()
             setWhoToCallLayoutGone()
+            stopCallDurationTimer()
             client.endCall()
         }
     }
@@ -248,6 +258,7 @@ class MainActivity : AppCompatActivity() {
         mSocket.on("answer-made", answerMade)
         mSocket.on("answer-response", answerReceived)
         mSocket.on("ice-candidate-response", icCandidate)
+        mSocket.on("call-end-response", onEndCall)
     }
 
 
@@ -287,5 +298,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun setIncomingCallLayoutGone() {
         mBinding.incomingCallLayout.visibility = View.GONE
+    }
+
+    private fun startCallDurationTimer() {
+        callStartTime = System.currentTimeMillis()
+        callDurationTimer = Timer()
+        callDurationTimer?.scheduleAtFixedRate(object : TimerTask() {
+            override fun run() {
+                val currentTime = System.currentTimeMillis()
+                val elapsedTime = currentTime - callStartTime
+                val minutes = elapsedTime / (1000 * 60)
+                val seconds = (elapsedTime / 1000) % 60
+                runOnUiThread {
+                    mBinding.callDurationTextView.text =
+                        String.format("%02d:%02d", minutes, seconds)
+                }
+            }
+        }, 0, 1000)
+    }
+
+    private fun stopCallDurationTimer() {
+        callDurationTimer?.cancel()
+        callDurationTimer = null
+        mBinding.callDurationTextView.text = "00:00"
     }
 }
