@@ -149,12 +149,12 @@ class WebRTCManager(
 
     // Your WebRTCManager class should have a method like this to send SDP to the remote peer
     fun sendSdpToRemotePeer(
-        sessionDescription: SessionDescription, eventName: String, data: JSONObject
+        sessionDescription: SessionDescription? = null, eventName: String, data: JSONObject
     ) {
         // Implement the logic to send the SDP to the remote peer using your signaling mechanism
-        data.put("sdp", sessionDescription.description)
-        Log.d(TAG, "emit: eventName= $eventName description= ${sessionDescription.description}")
-        Log.d(TAG, "emit: eventName= $eventName type= ${sessionDescription.type}")
+        data.put("sdp", sessionDescription?.description)
+        Log.d(TAG, "emit: eventName= $eventName description= ${sessionDescription?.description}")
+        Log.d(TAG, "emit: eventName= $eventName type= ${sessionDescription?.type}")
         socket.emit(eventName, data)
     }
 

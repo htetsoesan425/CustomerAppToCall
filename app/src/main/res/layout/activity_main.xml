@@ -43,11 +43,19 @@
 
     </LinearLayout>
 
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/btnCall"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="CAll"
+        android:visibility="gone" />
+
     <RelativeLayout
         android:id="@+id/whoToCallLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/incomingCallLayout"
+        android:layout_below="@+id/btnCall"
         android:visibility="gone">
 
         <EditText
@@ -70,6 +78,7 @@
         android:id="@+id/callLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_below="@id/btnCall"
         android:visibility="gone"
         tools:visibility="visible">
 

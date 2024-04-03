@@ -70,7 +70,6 @@ class MainActivity : AppCompatActivity() {
                 val data = args[0] as JSONObject
                 Log.d(TAG, "answerMade:$data")
                 client.receive(data)
-                startCallDurationTimer()
 
             } catch (e: JSONException) {
                 Log.d(TAG, "answerMadeErr-${e.message}")
@@ -89,6 +88,7 @@ class MainActivity : AppCompatActivity() {
                     SessionDescription.Type.ANSWER, data.getString("sdp")
                 )
                 client.onRemoteSessionReceived(session)
+                startCallDurationTimer()
 
             } catch (e: JSONException) {
                 Log.d(TAG, "answerReceivedErr-${e.message}")
@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val data = args[0] as JSONObject
                 setCallLayoutGone()
-                setWhoToCallLayoutVisible()
+                //setWhoToCallLayoutVisible()
                 setIncomingCallLayoutGone()
                 stopCallDurationTimer()
                 client.endCall()
@@ -206,12 +206,20 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        mBinding.btnCall.setOnClickListener {
+            val data = JSONObject()
+            data.put("to", riderId)
+            data.put("from", customerId)
+            data.put("type", "offer")
+
+            client.sendSdpToRemotePeer(null, "call-other", data)
+        }
+
         mBinding.acceptButton.setOnClickListener {
             setIncomingCallLayoutGone()
             setCallLayoutVisible()
             client.startLocalAudio()
             client.call(mData)
-
         }
 
         mBinding.micButton.setOnClickListener {
@@ -245,9 +253,8 @@ class MainActivity : AppCompatActivity() {
             mSocket.emit("call-end", data)
 
             setCallLayoutGone()
-            setWhoToCallLayoutVisible()
+            //setWhoToCallLayoutVisible()
             setIncomingCallLayoutGone()
-            setWhoToCallLayoutGone()
             stopCallDurationTimer()
             client.endCall()
         }
@@ -288,13 +295,13 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun setWhoToCallLayoutGone() {
-        mBinding.whoToCallLayout.visibility = View.GONE
-    }
+//    private fun setWhoToCallLayoutGone() {
+//        mBinding.whoToCallLayout.visibility = View.GONE
+//    }
 
-    private fun setWhoToCallLayoutVisible() {
-        mBinding.whoToCallLayout.visibility = View.VISIBLE
-    }
+//    private fun setWhoToCallLayoutVisible() {
+//        mBinding.whoToCallLayout.visibility = View.VISIBLE
+//    }
 
     private fun setIncomingCallLayoutGone() {
         mBinding.incomingCallLayout.visibility = View.GONE
