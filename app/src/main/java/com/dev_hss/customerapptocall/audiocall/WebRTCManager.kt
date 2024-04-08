@@ -38,7 +38,9 @@ class WebRTCManager(
     private val iceServer = listOf(
         PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
     )
-    private val peerConnection by lazy { createPeerConnection(customPeerConnectionObserver) }
+    private var peerConnection: PeerConnection? = null
+
+    //private val peerConnection by lazy { createPeerConnection(customPeerConnectionObserver) }
     private var localAudioTrack: AudioTrack? = null
     private var videoCapturer: CameraVideoCapturer? = null
     private var localVideoTrack: VideoTrack? = null
@@ -96,6 +98,7 @@ class WebRTCManager(
     }
 
     fun call(data: JSONObject) {
+        peerConnection = createPeerConnection(customPeerConnectionObserver)
         val mediaConstraints = MediaConstraints()
         // Modify constraints for audio-only call
         mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
@@ -111,6 +114,7 @@ class WebRTCManager(
                 peerConnection?.setLocalDescription(
                     object : SdpObserver {
                         override fun onCreateSuccess(p0: SessionDescription?) {
+                            Log.d(TAG, "onCreateSuccess: #")
 
                         }
 
@@ -126,9 +130,12 @@ class WebRTCManager(
                         }
 
                         override fun onCreateFailure(p0: String?) {
+                            Log.d(TAG, "onCreateFailure: $p0")
+
                         }
 
                         override fun onSetFailure(p0: String?) {
+                            Log.d(TAG, "onSetFailure: $p0")
                         }
 
                     }, sdp
@@ -137,12 +144,16 @@ class WebRTCManager(
             }
 
             override fun onSetSuccess() {
+                Log.d(TAG, "onSetSuccess: #")
             }
 
             override fun onCreateFailure(p0: String?) {
+                Log.d(TAG, "onCreateFailure: $p0")
             }
 
             override fun onSetFailure(p0: String?) {
+                Log.d(TAG, "onSetFailure: $p0")
+
             }
         }, mediaConstraints)
     }
@@ -170,8 +181,8 @@ class WebRTCManager(
     }
 
 
-    fun receive(offerJson: JSONObject) {
-
+    fun answer(offerJson: JSONObject) {
+        peerConnection = createPeerConnection(customPeerConnectionObserver)
         val offer = parseSdpOffer(offerJson)
         val from = offerJson.getString("from")
         val to = offerJson.getString("to")

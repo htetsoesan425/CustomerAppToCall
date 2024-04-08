@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val data = args[0] as JSONObject
                 Log.d(TAG, "answerMade:$data")
-                client.receive(data)
+                client.answer(data)
 
             } catch (e: JSONException) {
                 Log.d(TAG, "answerMadeErr-${e.message}")
