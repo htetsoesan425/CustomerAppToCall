@@ -2,10 +2,7 @@ package com.dev_hss.customerapptocall.audiocall
 
 import android.app.Application
 import android.util.Log
-import com.dev_hss.customerapptocall.MainActivity
 import io.socket.client.Socket
-import io.socket.emitter.Emitter
-import org.json.JSONException
 import org.json.JSONObject
 import org.webrtc.AudioTrack
 import org.webrtc.Camera2Enumerator
@@ -28,7 +25,9 @@ class WebRTCManager(
     private val customPeerConnectionObserver: CustomPeerConnectionObserver,
     private val socket: Socket
 ) {
-
+    init {
+        initPeerConnectionFactory(application)
+    }
     companion object {
         const val TAG = "WebRTCManager"
     }
@@ -38,55 +37,30 @@ class WebRTCManager(
     private val iceServer = listOf(
         PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
     )
-    private var peerConnection: PeerConnection? = null
+    private val peerConnection by lazy { createPeerConnection(customPeerConnectionObserver) }
 
-    //private val peerConnection by lazy { createPeerConnection(customPeerConnectionObserver) }
     private var localAudioTrack: AudioTrack? = null
     private var videoCapturer: CameraVideoCapturer? = null
     private var localVideoTrack: VideoTrack? = null
     private val localVideoSource by lazy { peerConnectionFactory.createVideoSource(false) }
     private val localAudioSource by lazy { peerConnectionFactory.createAudioSource(MediaConstraints()) }
 
-    private val callMade = Emitter.Listener { args ->
-        val test = args[0] as JSONObject
-        Log.d(MainActivity.TAG, "callMade:$test")
-        try {
-            val data = args[0] as JSONObject
-            Log.d(MainActivity.TAG, "callMade:$data")
-            //client.
-            //mBinding.tv1.text = data.toString()
 
-
-        } catch (e: JSONException) {
-            Log.d(MainActivity.TAG, "CallMadeErr-${e.message}")
-            //mBinding.tv1.text = e.message
-
-        }
-    }
-
-    init {
-        initPeerConnectionFactory(application)
-    }
 
     private fun initPeerConnectionFactory(application: Application) {
         val options = PeerConnectionFactory.InitializationOptions.builder(application)
-            .setEnableInternalTracer(true)
-            .setFieldTrials("WebRTC-H264HighProfile/Enabled/")
+            .setEnableInternalTracer(true).setFieldTrials("WebRTC-H264HighProfile/Enabled/")
             .createInitializationOptions()
 
         PeerConnectionFactory.initialize(options)
     }
 
     private fun createPeerConnectionFactory(): PeerConnectionFactory {
-        return PeerConnectionFactory.builder()
-            .setVideoEncoderFactory(
+        return PeerConnectionFactory.builder().setVideoEncoderFactory(
                 DefaultVideoEncoderFactory(
-                    eglContext.eglBaseContext,
-                    true,
-                    true
+                    eglContext.eglBaseContext, true, true
                 )
-            )
-            .setVideoDecoderFactory(DefaultVideoDecoderFactory(eglContext.eglBaseContext))
+        ).setVideoDecoderFactory(DefaultVideoDecoderFactory(eglContext.eglBaseContext))
             .setOptions(PeerConnectionFactory.Options().apply {
                 disableEncryption = true
                 disableNetworkMonitor = true
@@ -97,18 +71,29 @@ class WebRTCManager(
         return peerConnectionFactory.createPeerConnection(iceServer, customPeerConnectionObserver)
     }
 
+    private fun createPeerConnectionIfNeeded() {
+        // Just accessing the lazy property will create the peer connection if it's null
+        peerConnection
+    }
+
+    private fun reopenPeerConnection() {
+        // Close the existing peer connection if it exists
+        endCall()
+        // Create a new peer connection by accessing the lazy property
+        createPeerConnectionIfNeeded()
+    }
+
     fun call(data: JSONObject) {
-        peerConnection = createPeerConnection(customPeerConnectionObserver)
+        //reopenPeerConnection()
         val mediaConstraints = MediaConstraints()
         // Modify constraints for audio-only call
         mediaConstraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
         mediaConstraints.mandatory.add(
             MediaConstraints.KeyValuePair(
-                "OfferToReceiveVideo",
-                "false"
+                "OfferToReceiveVideo", "false"
             )
         )
-
+        Log.d(TAG, "call: ${peerConnection?.signalingState()}")
         peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(sdp: SessionDescription) {
                 peerConnection?.setLocalDescription(
@@ -164,12 +149,11 @@ class WebRTCManager(
     ) {
         // Implement the logic to send the SDP to the remote peer using your signaling mechanism
         data.put("sdp", sessionDescription?.description)
-        Log.d(TAG, "emit: eventName= $eventName description= ${sessionDescription?.description}")
-        Log.d(TAG, "emit: eventName= $eventName type= ${sessionDescription?.type}")
+        Log.d(TAG, "emit: eventName= $eventName data= $data")
         socket.emit(eventName, data)
     }
 
-    private fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
+    fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
         val sdpTypeString = sdpOfferJson.getString("type")
         val sdpDescription = sdpOfferJson.getString("sdp")
         val sdpType = when (sdpTypeString) {
@@ -182,7 +166,7 @@ class WebRTCManager(
 
 
     fun answer(offerJson: JSONObject) {
-        peerConnection = createPeerConnection(customPeerConnectionObserver)
+        //reopenPeerConnection()
         val offer = parseSdpOffer(offerJson)
         val from = offerJson.getString("from")
         val to = offerJson.getString("to")
@@ -190,6 +174,8 @@ class WebRTCManager(
         val constraints = MediaConstraints()
         constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"))
         constraints.mandatory.add(MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"))
+
+        Log.d(TAG, "answer:State ${peerConnection?.signalingState()}")
 
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(answer: SessionDescription) {
@@ -208,21 +194,28 @@ class WebRTCManager(
                     }
 
                     override fun onCreateFailure(p0: String?) {
+                        Log.d(TAG, "onCreateFailure:setLocalDescription $p0")
+
                     }
 
                     override fun onSetFailure(p0: String?) {
+                        Log.d(TAG, "onSetFailure:setLocalDescription $p0")
                     }
 
-                }, offer)
+                }, answer)
             }
 
             override fun onSetSuccess() {
+                Log.d(TAG, "onSetSuccess:createAnswer Success")
+
             }
 
             override fun onCreateFailure(p0: String?) {
+                Log.d(TAG, "onCreateFailure:createAnswer $p0")
             }
 
             override fun onSetFailure(p0: String?) {
+                Log.d(TAG, "onSetFailure:createAnswer $p0")
             }
 
         }, constraints)
@@ -230,13 +223,11 @@ class WebRTCManager(
 
     fun addIceCandidate(p0: IceCandidate?) {
         peerConnection?.addIceCandidate(p0)
-        Log.d(TAG, "addIceCandidate: added $p0")
 
     }
 
     fun onRemoteSessionReceived(sdp: SessionDescription) {
-        Log.d(TAG, "Answer received: $sdp")
-
+        Log.d(TAG, "Answer received: ${sdp.type}")
         peerConnection?.setRemoteDescription(object : SdpObserver {
             override fun onCreateSuccess(p0: SessionDescription?) {
                 Log.d(TAG, "Remote description set successfully: $sdp")
@@ -281,8 +272,7 @@ class WebRTCManager(
             SurfaceTextureHelper.create(Thread.currentThread().name, eglContext.eglBaseContext)
         videoCapturer = getVideoCapturer(application)
         videoCapturer?.initialize(
-            surfaceTextureHelper,
-            surface.context, localVideoSource.capturerObserver
+            surfaceTextureHelper, surface.context, localVideoSource.capturerObserver
         )
         videoCapturer?.startCapture(320, 240, 30)
         localVideoTrack = peerConnectionFactory.createVideoTrack("local_track", localVideoSource)

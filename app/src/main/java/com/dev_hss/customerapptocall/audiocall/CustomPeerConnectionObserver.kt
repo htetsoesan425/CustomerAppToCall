@@ -7,7 +7,7 @@ import org.webrtc.MediaStream
 import org.webrtc.PeerConnection
 import org.webrtc.RtpReceiver
 
-open class CustomPeerConnectionObserver() : PeerConnection.Observer {
+open class CustomPeerConnectionObserver : PeerConnection.Observer {
 
     override fun onIceCandidate(iceCandidate: IceCandidate) {
         Log.d(TAG, "onIceCandidate: $iceCandidate")

@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity() {
                 val data = args[0] as JSONObject
                 Log.d(TAG, "callMade:$data")
                 setIncomingCallLayoutVisible()
+                setWhoToCallLayoutGone()
                 mData = data
 
             } catch (e: JSONException) {
@@ -68,12 +69,16 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             try {
                 val data = args[0] as JSONObject
-                Log.d(TAG, "answerMade:$data")
+                val offer = client.parseSdpOffer(data)
+                setCallLayoutVisible()
+                setWhoToCallLayoutGone()
+                client.startLocalAudio()
+                client.onRemoteSessionReceived(offer)
                 client.answer(data)
+                startCallDurationTimer()
 
             } catch (e: JSONException) {
-                Log.d(TAG, "answerMadeErr-${e.message}")
-
+                Log.d(TAG, "${e.message}")
             }
         }
     }
@@ -89,6 +94,7 @@ class MainActivity : AppCompatActivity() {
                 )
                 client.onRemoteSessionReceived(session)
                 startCallDurationTimer()
+                setWhoToCallLayoutGone()
 
             } catch (e: JSONException) {
                 Log.d(TAG, "answerReceivedErr-${e.message}")
@@ -124,7 +130,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val data = args[0] as JSONObject
                 setCallLayoutGone()
-                //setWhoToCallLayoutVisible()
+                setWhoToCallLayoutVisible()
                 setIncomingCallLayoutGone()
                 stopCallDurationTimer()
                 client.endCall()
@@ -167,57 +173,66 @@ class MainActivity : AppCompatActivity() {
         connectSocket()
         listenSocket()
 
-        PermissionX.init(this).permissions(
-            Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA
-        ).request { allGranted, _, _ ->
-            if (allGranted) {
+//        PermissionX.init(this).permissions(
+//            Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA
+//        ).request { allGranted, _, _ ->
+//            if (allGranted) {
+//
+//                client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
+//
+//                    override fun onIceCandidate(iceCandidate: IceCandidate) {
+//                        super.onIceCandidate(iceCandidate)
+//                        client.addIceCandidate(iceCandidate)
+//                        val candidateJson = JSONObject().apply {
+//                            put("sdpMid", iceCandidate.sdpMid)
+//                            put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
+//                            put("sdpCandidate", iceCandidate.sdp)
+//                        }
+//                        val data = JSONObject()
+//                        data.put("from", customerId)
+//                        data.put("to", riderId)
+//                        data.put("iceCandidate", candidateJson)
+//                        mSocket.emit("gather-ice-candidate", data)
+//
+//                        // Send ICE candidate to the other peer
+//
+//
+//                    }
+//
+//                    override fun onAddStream(p0: MediaStream) {
+//                        super.onAddStream(p0)
+//                        val remoteAudioTrack = p0.audioTracks.firstOrNull()
+//                        remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
+//                    }
+//
+//                }, mSocket)
+//            } else {
+//                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
+//                    .show()
+//            }
+//        }
 
-                client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
-
-                    override fun onIceCandidate(iceCandidate: IceCandidate) {
-                        super.onIceCandidate(iceCandidate)
-                        client.addIceCandidate(iceCandidate)
-                        val candidateJson = JSONObject().apply {
-                            put("sdpMid", iceCandidate.sdpMid)
-                            put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
-                            put("sdpCandidate", iceCandidate.sdp)
-                        }
-                        val data = JSONObject()
-                        data.put("from", customerId)
-                        data.put("to", riderId)
-                        data.put("iceCandidate", candidateJson)
-                        mSocket.emit("gather-ice-candidate", data)
-
-                        // Send ICE candidate to the other peer
-
-
-                    }
-
-                    override fun onAddStream(p0: MediaStream) {
-                        super.onAddStream(p0)
-                        val remoteAudioTrack = p0.audioTracks.firstOrNull()
-                        remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
-                    }
-
-                }, mSocket)
-            } else {
-                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
-                    .show()
+        mBinding.callBtn.setOnClickListener {
+            PermissionX.init(this).permissions(
+                Manifest.permission.RECORD_AUDIO
+            ).request { allGranted, _, _ ->
+                if (allGranted) {
+                    val data = JSONObject()
+                    data.put("to", riderId)
+                    data.put("from", customerId)
+                    data.put("type", "offer")
+                    client.sendSdpToRemotePeer(null, "call-other", data)
+                } else {
+                    Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
+                        .show()
+                }
             }
-        }
-
-        mBinding.btnCall.setOnClickListener {
-            val data = JSONObject()
-            data.put("to", riderId)
-            data.put("from", customerId)
-            data.put("type", "offer")
-
-            client.sendSdpToRemotePeer(null, "call-other", data)
         }
 
         mBinding.acceptButton.setOnClickListener {
             setIncomingCallLayoutGone()
             setCallLayoutVisible()
+            setWhoToCallLayoutGone()
             client.startLocalAudio()
             client.call(mData)
         }
@@ -253,7 +268,7 @@ class MainActivity : AppCompatActivity() {
             mSocket.emit("call-end", data)
 
             setCallLayoutGone()
-            //setWhoToCallLayoutVisible()
+            setWhoToCallLayoutVisible()
             setIncomingCallLayoutGone()
             stopCallDurationTimer()
             client.endCall()
@@ -295,13 +310,13 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-//    private fun setWhoToCallLayoutGone() {
-//        mBinding.whoToCallLayout.visibility = View.GONE
-//    }
+    private fun setWhoToCallLayoutGone() {
+        mBinding.whoToCallLayout.visibility = View.GONE
+    }
 
-//    private fun setWhoToCallLayoutVisible() {
-//        mBinding.whoToCallLayout.visibility = View.VISIBLE
-//    }
+    private fun setWhoToCallLayoutVisible() {
+        mBinding.whoToCallLayout.visibility = View.VISIBLE
+    }
 
     private fun setIncomingCallLayoutGone() {
         mBinding.incomingCallLayout.visibility = View.GONE
@@ -328,5 +343,47 @@ class MainActivity : AppCompatActivity() {
         callDurationTimer?.cancel()
         callDurationTimer = null
         mBinding.callDurationTextView.text = "00:00"
+    }
+
+    override fun onResume() {
+        super.onResume()
+        PermissionX.init(this).permissions(
+            Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA
+        ).request { allGranted, _, _ ->
+            if (allGranted) {
+
+                client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
+
+                    override fun onIceCandidate(iceCandidate: IceCandidate) {
+                        super.onIceCandidate(iceCandidate)
+                        client.addIceCandidate(iceCandidate)
+                        val candidateJson = JSONObject().apply {
+                            put("sdpMid", iceCandidate.sdpMid)
+                            put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
+                            put("sdpCandidate", iceCandidate.sdp)
+                        }
+                        val data = JSONObject()
+                        data.put("from", customerId)
+                        data.put("to", riderId)
+                        data.put("iceCandidate", candidateJson)
+                        mSocket.emit("gather-ice-candidate", data)
+
+                        // Send ICE candidate to the other peer
+
+
+                    }
+
+                    override fun onAddStream(p0: MediaStream) {
+                        super.onAddStream(p0)
+                        val remoteAudioTrack = p0.audioTracks.firstOrNull()
+                        remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
+                    }
+
+                }, mSocket)
+            } else {
+                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
     }
 }
