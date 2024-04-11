@@ -89,4 +89,13 @@ object SocketHandler {
     }
 
 
+    fun listenForEvent(eventName: String, listener: Emitter.Listener) {
+        mSocket.on(eventName, listener)
+    }
+
+    fun emit(eventName: String, vararg args: Any) {
+        mSocket.emit(eventName, *args)
+    }
+
+
 }

@@ -18,7 +18,6 @@ import com.google.android.gms.tasks.OnCompleteListener
 import com.google.firebase.FirebaseApp
 import com.google.firebase.messaging.FirebaseMessaging
 import com.permissionx.guolindev.PermissionX
-import io.socket.client.Socket
 import io.socket.emitter.Emitter
 import org.json.JSONException
 import org.json.JSONObject
@@ -40,7 +39,6 @@ class MainActivity : AppCompatActivity() {
     private val customerId = "65811f3b5a98a63e45aa13f2"
 
     private lateinit var mBinding: ActivityMainBinding
-    private lateinit var mSocket: Socket
     private lateinit var client: WebRTCManager
     private var fcmToken: String = ""
     private var isMute = false
@@ -50,20 +48,6 @@ class MainActivity : AppCompatActivity() {
     private var callStartTime: Long = 0
     private var callDurationTimer: Timer? = null
 
-    private val callMade = Emitter.Listener { args ->
-        runOnUiThread {
-            try {
-                val data = args[0] as JSONObject
-                Log.d(TAG, "callMade:$data")
-                setIncomingCallLayoutVisible()
-                setWhoToCallLayoutGone()
-                mData = data
-
-            } catch (e: JSONException) {
-                Log.d(TAG, "CallMadeErr-${e.message}")
-            }
-        }
-    }
 
     private val answerMade = Emitter.Listener { args ->
         runOnUiThread {
@@ -134,6 +118,7 @@ class MainActivity : AppCompatActivity() {
                 setIncomingCallLayoutGone()
                 stopCallDurationTimer()
                 client.endCall()
+                finish()
             } catch (e: JSONException) {
                 Log.d(TAG, "${e.message}")
             }
@@ -173,44 +158,7 @@ class MainActivity : AppCompatActivity() {
         connectSocket()
         listenSocket()
 
-//        PermissionX.init(this).permissions(
-//            Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA
-//        ).request { allGranted, _, _ ->
-//            if (allGranted) {
-//
-//                client = WebRTCManager(application, object : CustomPeerConnectionObserver() {
-//
-//                    override fun onIceCandidate(iceCandidate: IceCandidate) {
-//                        super.onIceCandidate(iceCandidate)
-//                        client.addIceCandidate(iceCandidate)
-//                        val candidateJson = JSONObject().apply {
-//                            put("sdpMid", iceCandidate.sdpMid)
-//                            put("sdpMLineIndex", iceCandidate.sdpMLineIndex)
-//                            put("sdpCandidate", iceCandidate.sdp)
-//                        }
-//                        val data = JSONObject()
-//                        data.put("from", customerId)
-//                        data.put("to", riderId)
-//                        data.put("iceCandidate", candidateJson)
-//                        mSocket.emit("gather-ice-candidate", data)
-//
-//                        // Send ICE candidate to the other peer
-//
-//
-//                    }
-//
-//                    override fun onAddStream(p0: MediaStream) {
-//                        super.onAddStream(p0)
-//                        val remoteAudioTrack = p0.audioTracks.firstOrNull()
-//                        remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
-//                    }
-//
-//                }, mSocket)
-//            } else {
-//                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
-//                    .show()
-//            }
-//        }
+        rtcAudioManager.setDefaultAudioDevice(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
 
         mBinding.callBtn.setOnClickListener {
             PermissionX.init(this).permissions(
@@ -265,36 +213,106 @@ class MainActivity : AppCompatActivity() {
             val data = JSONObject()
             data.put("from", customerId)
             data.put("to", riderId)
-            mSocket.emit("call-end", data)
+            SocketHandler.emit("call-end", data)
 
             setCallLayoutGone()
             setWhoToCallLayoutVisible()
             setIncomingCallLayoutGone()
             stopCallDurationTimer()
             client.endCall()
+            finish()
         }
     }
 
     private fun listenSocket() {
-        mSocket.on("call-made", callMade) //listen from rider
-        mSocket.on("answer-made", answerMade)
-        mSocket.on("answer-response", answerReceived)
-        mSocket.on("ice-candidate-response", icCandidate)
-        mSocket.on("call-end-response", onEndCall)
+        SocketHandler.observeEventData("call-made") { data ->
+            runOnUiThread {
+                try {
+                    Log.d(TAG, "callMade:$data")
+                    setIncomingCallLayoutVisible()
+                    setWhoToCallLayoutGone()
+                    mData = data
+
+                } catch (e: JSONException) {
+                    Log.d(TAG, "CallMadeErr-${e.message}")
+                }
+            }
+        } //listen from rider
+        SocketHandler.observeEventData("answer-made") { data ->
+            runOnUiThread {
+                try {
+                    val offer = client.parseSdpOffer(data)
+                    setCallLayoutVisible()
+                    setWhoToCallLayoutGone()
+                    client.startLocalAudio()
+                    client.onRemoteSessionReceived(offer)
+                    client.answer(data)
+                    startCallDurationTimer()
+
+                } catch (e: JSONException) {
+                    Log.d(TAG, "${e.message}")
+                }
+            }
+        }
+        SocketHandler.observeEventData("answer-response") { data ->
+            runOnUiThread {
+                try {
+                    Log.d(TAG, "answerReceived:$data")
+                    val session = SessionDescription(
+                        SessionDescription.Type.ANSWER, data.getString("sdp")
+                    )
+                    client.onRemoteSessionReceived(session)
+                    startCallDurationTimer()
+                    setWhoToCallLayoutGone()
+
+                } catch (e: JSONException) {
+                    Log.d(TAG, "answerReceivedErr-${e.message}")
+                    //mBinding.tv2.text = e.message
+                }
+            }
+        }
+        SocketHandler.observeEventData("ice-candidate-response") { data ->
+            try {
+                val receivingCandidate = data.getJSONObject("iceCandidate")
+                Log.d(TAG, "icCandidateJson:$receivingCandidate")
+                client.addIceCandidate(
+                    IceCandidate(
+                        receivingCandidate.getString("sdpMid"),
+                        Math.toIntExact(receivingCandidate.getString("sdpMLineIndex").toLong()),
+                        receivingCandidate.getString("sdpCandidate")
+                    )
+                )
+            } catch (e: JSONException) {
+                Log.d(TAG, "${e.message}")
+            }
+        }
+        SocketHandler.observeEventData("call-end-response") {
+            runOnUiThread {
+                try {
+                    setCallLayoutGone()
+                    setWhoToCallLayoutVisible()
+                    setIncomingCallLayoutGone()
+                    stopCallDurationTimer()
+                    client.endCall()
+                    finish()
+                } catch (e: JSONException) {
+                    Log.d(TAG, "${e.message}")
+                }
+            }
+        }
     }
 
 
     private fun connectSocket() {
         SocketHandler.setSocket(accessToken)
         SocketHandler.establishConnection()
-        mSocket = SocketHandler.getSocket()
-        mSocket.emit("joinCustomer", customerId)
+        SocketHandler.emit("joinCustomer", customerId)
 
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        mSocket.close()
+        SocketHandler.closeConnection()
     }
 
     private fun setCallLayoutVisible() {
@@ -366,7 +384,7 @@ class MainActivity : AppCompatActivity() {
                         data.put("from", customerId)
                         data.put("to", riderId)
                         data.put("iceCandidate", candidateJson)
-                        mSocket.emit("gather-ice-candidate", data)
+                        SocketHandler.emit("gather-ice-candidate", data)
 
                         // Send ICE candidate to the other peer
 
@@ -379,10 +397,9 @@ class MainActivity : AppCompatActivity() {
                         remoteAudioTrack?.setEnabled(true) // Ensure audio is enabled
                     }
 
-                }, mSocket)
+                })
             } else {
-                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG)
-                    .show()
+                Toast.makeText(this, "you should accept all permissions", Toast.LENGTH_LONG).show()
             }
         }
     }

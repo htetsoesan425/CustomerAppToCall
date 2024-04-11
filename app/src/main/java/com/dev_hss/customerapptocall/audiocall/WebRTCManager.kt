@@ -2,7 +2,7 @@ package com.dev_hss.customerapptocall.audiocall
 
 import android.app.Application
 import android.util.Log
-import io.socket.client.Socket
+import com.dev_hss.customerapptocall.socket.SocketHandler
 import org.json.JSONObject
 import org.webrtc.AudioTrack
 import org.webrtc.Camera2Enumerator
@@ -22,12 +22,12 @@ import org.webrtc.VideoTrack
 
 class WebRTCManager(
     private val application: Application,
-    private val customPeerConnectionObserver: CustomPeerConnectionObserver,
-    private val socket: Socket
+    private val customPeerConnectionObserver: CustomPeerConnectionObserver
 ) {
     init {
         initPeerConnectionFactory(application)
     }
+
     companion object {
         const val TAG = "WebRTCManager"
     }
@@ -46,7 +46,6 @@ class WebRTCManager(
     private val localAudioSource by lazy { peerConnectionFactory.createAudioSource(MediaConstraints()) }
 
 
-
     private fun initPeerConnectionFactory(application: Application) {
         val options = PeerConnectionFactory.InitializationOptions.builder(application)
             .setEnableInternalTracer(true).setFieldTrials("WebRTC-H264HighProfile/Enabled/")
@@ -57,9 +56,9 @@ class WebRTCManager(
 
     private fun createPeerConnectionFactory(): PeerConnectionFactory {
         return PeerConnectionFactory.builder().setVideoEncoderFactory(
-                DefaultVideoEncoderFactory(
-                    eglContext.eglBaseContext, true, true
-                )
+            DefaultVideoEncoderFactory(
+                eglContext.eglBaseContext, true, true
+            )
         ).setVideoDecoderFactory(DefaultVideoDecoderFactory(eglContext.eglBaseContext))
             .setOptions(PeerConnectionFactory.Options().apply {
                 disableEncryption = true
@@ -150,7 +149,7 @@ class WebRTCManager(
         // Implement the logic to send the SDP to the remote peer using your signaling mechanism
         data.put("sdp", sessionDescription?.description)
         Log.d(TAG, "emit: eventName= $eventName data= $data")
-        socket.emit(eventName, data)
+        SocketHandler.emit(eventName, data)
     }
 
     fun parseSdpOffer(sdpOfferJson: JSONObject): SessionDescription {
